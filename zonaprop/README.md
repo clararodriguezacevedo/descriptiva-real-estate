@@ -1,173 +1,59 @@
-# Zonaprop Scraper
+# ZonaProp Scraper
 
-A Python-based web scraper built with Playwright to extract structured real estate listings from Zonaprop and export them as JSON files.
+Scrapes property listings from ZonaProp and exports them as a TSV file.
 
----
+## How it works
 
-## Overview
+- **Listing pages** are scraped with Playwright (cards are JavaScript-rendered)
+- **Detail pages** are fetched with requests + BeautifulSoup (description is server-side rendered, structured features are parsed from an embedded JSON object)
 
-This project scrapes property listings from Zonaprop search result pages and stores structured data in a JSON file.
+This hybrid approach keeps things fast — detail pages take ~1s each instead of ~10s with a headless browser.
 
-It is designed to handle dynamic content rendered via JavaScript, making it suitable for modern Single Page Applications (SPA).
-
----
-
-## Why Playwright?
-
-Zonaprop is a **Single Page Application (SPA)**.
-
-This means:
-
-- The initial HTML response does not contain listing data.
-- Property cards are rendered dynamically using JavaScript.
-- Traditional scrapers (e.g., `requests + BeautifulSoup`) cannot access the content directly.
-
-Playwright solves this by:
-
-- Launching a real Chromium browser.
-- Executing all JavaScript.
-- Waiting for the DOM to render.
-- Extracting fully loaded listing elements.
-
----
-
-## Extracted Data
-
-For each property listing, the scraper collects:
-
-- Listing ID
-- URL
-- Price (numeric)
-- Expenses (numeric)
-- Address
-- Location
-- Total square meters
-- Number of rooms
-- Bedrooms
-- Bathrooms
-- Parking spaces
-- Scraping timestamp
-
-Duplicate listings across paginated pages are automatically filtered.
-
----
-
-## Requirements
-
-- Python 3.10+
-- Playwright
-
----
-
-## Installation
-
-Clone the repository or download the script.
-
-(Optional) Create a virtual environment:
-
-```bash
-python -m venv venv
-```
-
-Activate it:
-
-Windows:
-
-```bash
-venv\Scripts\activate
-```
-
-Linux / Mac:
-
-```bash
-source venv/bin/activate
-```
-
-Install dependencies:
+## Setup
 
 ```bash
 pip install -r requirements.txt
+playwright install chromium
 ```
-
-Install Playwright browsers:
-
-```bash
-playwright install
-```
-
----
 
 ## Usage
 
-Basic usage:
-
 ```bash
-python zonaprop_scraper.py "<URL>"
+python zonaprop_scraper.py "<URL>" [max_pages]
 ```
 
-Example:
+**Arguments:**
+- `URL` — ZonaProp search results page (required)
+- `max_pages` — number of pages to scrape (optional, default: 5)
 
+**Example:**
 ```bash
-python zonaprop_scraper.py "https://www.zonaprop.com.ar/departamentos-alquiler-caballito.html"
+python zonaprop_scraper.py "https://www.zonaprop.com.ar/departamentos-venta-capital-federal.html" 3
 ```
-
-Specify maximum number of pages:
-
-```bash
-python zonaprop_scraper.py "<URL>" 10
-```
-
-Arguments:
-
-- First argument: Base search URL
-- Second argument (optional): Maximum number of pages to scrape (default = 5)
-
----
 
 ## Output
 
-The script:
+A TSV file saved to `output/zonaprop_YYYYMMDD_HHMMSS.tsv` with the following columns:
 
-- Automatically creates a `data/` folder if it does not exist.
-- Saves results as a timestamped JSON file:
-
-```
-data/zonaprop_YYYYMMDD_HHMMSS.json
-```
-
-Example:
-
-```
-data/zonaprop_20260212_014523.json
-```
-
----
-
-## Project Structure
-
-```
-zonaprop-scraper/
-│
-├── data/
-├── zonaprop_scraper.py
-├── requirements.txt
-└── README.md
-```
-
----
-
-## Disclaimer
-
-This project is intended for educational and analytical purposes only.
-
-Before running large-scale scraping:
-
-- Review the website’s Terms of Service
-- Respect responsible scraping practices
-- Avoid excessive traffic
-
----
-
-## To fix:
-
-- If there are no properties matching the selected filters in the specified area(s), Zonaprop provides suggestions in other locations, and the scraper also extracts those suggested listings.
+| Column | Description |
+|---|---|
+| Precio | Listing price |
+| Expensas | Monthly expenses |
+| Calle | Street name |
+| Altura | Street number |
+| Piso | Floor |
+| Ubicacion | Neighbourhood |
+| Detalles | Features from card (m², rooms, etc.) |
+| Caracteristicas | Structured features from listing page (pool, gym, etc.) |
+| Descripción | Full listing description |
+| Publicado | Days since publication |
+| Visualizaciones | View count |
+| Link | URL of the listing |
+| Amenities | Binary: pool, gym, SUM, parrilla, etc. |
+| Losa_Central | Binary: central heating |
+| Aire_Acond | Binary: air conditioning |
+| Apto_Credito | Binary: mortgage eligible |
+| Cochera | Binary: parking |
+| Seguridad | Binary: security/doorman |
+| Luminoso | Binary: bright/open views |
+| Balcon_Aterrazado | Binary: terrace or balcony |
