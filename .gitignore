@@ -1,0 +1,23 @@
+# Entornos virtuales
+venv/
+env/
+ENV/
+.env
+
+# Python caché
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Jupyter Notebook
+.ipynb_checkpoints
+*/.ipynb_checkpoints/*
+
+# Resultados de Scraping (evitar subir datos pesados)
+output/
+zonaprop/output/
+argenprop/output/
+
+# Sistema
+.DS_Store
+Thumbs.db
