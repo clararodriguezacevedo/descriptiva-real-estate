@@ -12,8 +12,7 @@ This hybrid approach keeps things fast — detail pages take ~1s each instead of
 ## Setup
 
 ```bash
-pip install -r requirements.txt
-playwright install chromium
+pip install curl_cffi beautifulsoup4 pandas
 ```
 
 ## Usage
@@ -23,7 +22,8 @@ python zonaprop_scraper.py "<URL>" [max_pages]
 ```
 
 **Arguments:**
-- `URL` — ZonaProp search results page (required)
+- `enlace` — ZonaProp search results page (required)
+- `operacion` — type of transaction (venta, alquiler or alquiler temporal)
 - `max_pages` — number of pages to scrape (optional, default: 5)
 
 **Example:**
@@ -33,7 +33,7 @@ python zonaprop_scraper.py "https://www.zonaprop.com.ar/departamentos-venta-capi
 
 ## Output
 
-A TSV file saved to `output/zonaprop_YYYYMMDD_HHMMSS.tsv` with the following columns:
+A TSV file saved to `output/zonaprop_operacion_YYYYMMDD_HHMMSS.tsv` with the following columns:
 
 | Column | Description |
 |---|---|
@@ -42,12 +42,9 @@ A TSV file saved to `output/zonaprop_YYYYMMDD_HHMMSS.tsv` with the following col
 | Calle | Street name |
 | Altura | Street number |
 | Piso | Floor |
-| Ubicacion | Neighbourhood |
+| Barrio | Neighbourhood |
 | Detalles | Features from card (m², rooms, etc.) |
-| Caracteristicas | Structured features from listing page (pool, gym, etc.) |
 | Descripción | Full listing description |
-| Publicado | Days since publication |
-| Visualizaciones | View count |
 | Link | URL of the listing |
 | Amenities | Binary: pool, gym, SUM, parrilla, etc. |
 | Losa_Central | Binary: central heating |
