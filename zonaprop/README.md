@@ -37,6 +37,10 @@ A TSV file saved to `output/zonaprop_operacion_YYYYMMDD_HHMMSS.tsv` with the fol
 
 | Column | Description |
 |---|---|
+| Fecha_Scraping | Scraping date |
+| Posting_ID | Card ID |
+| Sitio | Website from which the data is taken |
+| Operación | Transaction |
 | Precio | Listing price |
 | Expensas | Monthly expenses |
 | Calle | Street name |
@@ -46,7 +50,7 @@ A TSV file saved to `output/zonaprop_operacion_YYYYMMDD_HHMMSS.tsv` with the fol
 | Detalles | Features from card (m², rooms, etc.) |
 | Descripción | Full listing description |
 | Link | URL of the listing |
-| Amenities | Binary: pool, gym, SUM, parrilla, etc. |
+| Amenities | Amount of Amenities: pool, gym, SUM, parrilla, etc. |
 | Losa_Central | Binary: central heating |
 | Aire_Acond | Binary: air conditioning |
 | Apto_Credito | Binary: mortgage eligible |
