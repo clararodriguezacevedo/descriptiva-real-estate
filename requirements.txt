@@ -1,8 +1,0 @@
-beautifulsoup4
-pandas
-requests
-playwright
-lxml
-jupyter
-notebook
-nest_asyncio

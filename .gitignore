@@ -13,11 +13,6 @@ __pycache__/
 .ipynb_checkpoints
 */.ipynb_checkpoints/*
 
-# Resultados de Scraping (evitar subir datos pesados)
-output/
-zonaprop/output/
-argenprop/output/
-
 # Sistema
 .DS_Store
 Thumbs.db
