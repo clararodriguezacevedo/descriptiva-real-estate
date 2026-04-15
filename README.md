@@ -178,7 +178,7 @@ Cada fila del DataFrame maestro corresponde a un aviso único. Las columnas son:
 | Link | string | URL completa del aviso |
 | \+ 8 features | int 0/1 | Variables binarias/numéricas para identificar presencia/ausencia de amenities, losa\_central, aire\_acond, apto\_credito, cochera, seguridad, luminoso y balcon\_aterrazado.  |
 
-## **Concatenamos las tablas obtenidas en un DataFrame Maestro:** (https://colab.research.google.com/drive/10u6_cv9xnMFIaxbJU3bVoCrjNJqRqo57#scrollTo=I1ndjH19nvi9)
+## **Concatenamos las tablas obtenidas en un DataFrame Maestro:** 
 
 ## **6.5 Desafíos Técnicos y Soluciones**
 
