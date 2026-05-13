@@ -52,19 +52,19 @@ Nuestro cliente objetivo es una persona física que busca su primera inversión 
 
 # **3\. Definición de KPIs**
 
-Los siguientes indicadores serán calculados para cada barrio:
+Los siguientes indicadores son calculados por barrio, con precios normalizados a USD:
 
-| KPI | Fórmula | Propósito |
-| :---- | :---- | :---- |
-| Rentabilidad Bruta Largo plazo | (Alquiler Mensual × 12\) / Precio Venta | Mide el rendimiento anual sobre el capital invertido |
-| Rentabilidad Bruta Temporario | (Tarifa Diaria de zona \* Ocupación Estimada)/ Precio de Venta | Mide el rendimiento sobre el capital invertido si se decide alquilar por de forma temporaria..  |
-| Recupero de Inversión Largo Plazo | Precio Venta / (Alquiler Mensual × 12\)  | Años necesarios para recuperar la inversión |
-| Precio/m² | Precio Publicado / Superficie (m²) | Normaliza el valor para comparar entre propiedades |
-| Ocupación Estimada | 365 \- Ocupación anual promedio por barrio  | Forma de aproximar la ocupación esperada |
-| Índice bruto modalidad óptima | Rentabilidad Bruta temp/ Rentabilidad bruta LP | Comparación de ambas modalidades |
-| Rentabilidad Neta Largo plazo | Rentabilidad Bruta Largo plazo \- costos operativos | Descuenta los costos inmobiliarios, reparaciones  |
-| Rentabilidad Neta Temporario | Rentabilidad Bruta Temporario \- costos operativos | Descuenta los costos inmobiliarios, reparaciones, costos de limpieza  |
-| Índice neto modalidad óptima | Rentabilidad Neto temp/ Rentabilidad neto LP | Comparación de ambas modalidades |
+| \# | KPI | Fórmula | Propósito |
+| :---- | :---- | :---- | :---- |
+| 1 | Rentabilidad Bruta Largo Plazo | (Alquiler Mensual Mediano × 12\) / Precio Venta Mediano × 100 | Rendimiento bruto anual sobre el capital invertido vía alquiler tradicional |
+| 2 | Recupero de Inversión | Precio Venta / (Alquiler Mensual × 12\) | Años necesarios para recuperar la inversión; es el inverso del KPI 1 |
+| 3 | Precio por m² | Precio Publicado / m² — mediana por barrio y tipo de operación | Normaliza el valor para comparar propiedades entre barrios |
+| 4 | Rentabilidad Neta Largo Plazo | (Alquiler Anual − Expensas Anuales del Propietario\) / Precio Venta × 100 | Rentabilidad real descontando expensas en los casos donde las paga el propietario |
+| 5 | Precio/m² Relativo por Barrio | Precio/m² de la propiedad / Mediana Precio/m² de su barrio | Identifica propiedades por debajo de la mediana del barrio (oportunidades de compra\) |
+| 6 | Rentabilidad Bruta Temporario | (Alquiler Mensual Mediano Temporario × 12\) / Precio Venta Mediano × 100 | Rendimiento bruto anual si se alquila de forma temporaria |
+| 7 | Índice Bruto Modalidad Óptima | Rentabilidad Bruta Temporario / Rentabilidad Bruta Largo Plazo | Índice > 1 indica que el temporario supera al largo plazo en términos brutos |
+| 8 | Rentabilidad Neta Temporario | (Ingreso Anual Temporario − Expensas Anuales del Propietario\) / Precio Venta × 100 | Rentabilidad real temporaria; en Airbnb el propietario suele pagar las expensas, por lo que se descuentan en casi todos los casos |
+| 9 | Índice Neto Modalidad Óptima | Rentabilidad Neta Temporario / Rentabilidad Neta Largo Plazo | Índice > 1 indica que el temporario supera al largo plazo en términos netos |
 
 # **4\. Hipótesis Iniciales a Validar**
 
