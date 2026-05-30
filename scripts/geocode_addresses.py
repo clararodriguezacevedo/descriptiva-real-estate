@@ -1,16 +1,13 @@
-"""Geocodifica las direcciones de dataframe_limpio.tsv con USIG (GCBA) y Georef
-(Estado nacional).
+"""Geocodifica las direcciones del dataframe limpio usando dos APIs oficiales,
+una del Gobierno de la Ciudad y otra del Estado Nacional.
 
-Salidas (data/geocoding/):
-  cache/<api>.json          respuesta cruda por API, reanudable
-  geocoded_sample.tsv       lat/lon por API + consenso + distancia entre fuentes
-  dataframe_con_coords.tsv  dataframe_limpio + lat/lon de consenso
-  report.md                 reporte de resultados, uso y rate limits
+El script deja varios archivos en la carpeta de salida: el cache crudo por API
+(que es reanudable), una tabla con las coordenadas por API y el consenso, el
+dataframe original con las coordenadas agregadas, y un reporte de resultados.
 
-Uso:
-  python scripts/geocode_addresses.py              # geocoding completo
-  python scripts/geocode_addresses.py --refresh    # ignora cache
-  python scripts/geocode_addresses.py --report-only # solo regenera reporte
+Para correrlo, se ejecuta directamente desde la terminal. Acepta una opción
+para ignorar el cache y volver a consultar todo, y otra para regenerar
+solamente el reporte sin tocar las APIs.
 """
 from __future__ import annotations
 
@@ -49,12 +46,10 @@ USER_AGENT = "itba-ad-tp-geocoder/1.0 (academico; grupo1 ITBA Analitica Descript
 CABA_BBOX = (-58.55, -34.71, -58.33, -34.52)  # (lon_min, lat_min, lon_max, lat_max)
 
 
-# --------------------------------------------------------------------------- #
-# Normalizacion y clave de direccion
-# --------------------------------------------------------------------------- #
+# Normalización y clave de dirección
 def norm(s: object) -> str:
-    """Normaliza para usar como clave: quita acentos, puntuacion, unifica
-    Av/Avda/Avenida, colapsa espacios y baja a minusculas."""
+    """Normaliza un texto para usar como clave. Saca acentos y puntuación,
+    unifica las variantes de avenida, colapsa espacios y pasa todo a minúsculas."""
     s = unicodedata.normalize("NFKD", str(s)).encode("ascii", "ignore").decode()
     s = re.sub(r"[\.,'\"]", "", s)
     s = re.sub(r"\b(av|avda|avenida)\b\.?", "av", s, flags=re.I)
@@ -63,7 +58,7 @@ def norm(s: object) -> str:
 
 
 def make_key(calle: object, altura: object, barrio: object) -> Optional[str]:
-    """Clave canonica calle|altura|barrio. None si falta calle o altura."""
+    """Arma una clave canónica con calle, altura y barrio. Devuelve nulo si falta calle o altura."""
     if calle is None or altura is None:
         return None
     if isinstance(calle, float) and math.isnan(calle):
@@ -90,11 +85,9 @@ class Address:
         return f"{self.calle} {self.altura}"
 
 
-# --------------------------------------------------------------------------- #
 # Cache JSON reanudable
-# --------------------------------------------------------------------------- #
 class Cache:
-    """key -> dict. Persiste atomicamente cada FLUSH_EVERY inserciones."""
+    """Diccionario en memoria que se persiste de manera atómica cada cierta cantidad de inserciones."""
 
     FLUSH_EVERY = 10
 
@@ -105,7 +98,7 @@ class Cache:
             try:
                 self.data = json.loads(path.read_text(encoding="utf-8"))
             except json.JSONDecodeError:
-                print(f"  [warn] cache corrupto en {path.name}, se reinicia")
+                print(f"  Atención: el cache de {path.name} está corrupto, se reinicia.")
         self._dirty = 0
 
     def get(self, key: str) -> Optional[dict]:
@@ -127,17 +120,15 @@ class Cache:
         self._dirty = 0
 
 
-# --------------------------------------------------------------------------- #
 # Geocoders
-# --------------------------------------------------------------------------- #
 class Geocoder:
-    """Base: rate limit, reintentos, tope wall-clock duro y armado del resultado."""
+    """Clase base con el control de frecuencia, los reintentos, el tope duro de tiempo y el armado del resultado."""
 
     name = "base"
     min_delay = 1.0
     max_retries = 3
     backoff = 2.0
-    hard_timeout = 30.0   # cap wall-clock por intento (sockets pueden ignorar el timeout HTTP)
+    hard_timeout = 30.0   # tope duro por intento, porque los sockets a veces ignoran el timeout HTTP
     rate_limit_doc = ""
     endpoint = ""
 
@@ -151,12 +142,13 @@ class Geocoder:
         self._last = time.monotonic()
 
     def _lookup(self, addr: Address):
-        """Devuelve (lat, lon, label, raw). lat None => not_found (no reintenta).
-        Excepcion => error (reintenta)."""
+        """Devuelve latitud, longitud, etiqueta y respuesta cruda. Si la latitud
+        es nula, lo interpretamos como dirección no encontrada y no reintentamos.
+        Si lanza una excepción, lo interpretamos como error y sí reintentamos."""
         raise NotImplementedError
 
     def _lookup_bounded(self, addr: Address):
-        """_lookup con tope wall-clock duro via daemon thread."""
+        """Versión de la búsqueda con tope duro de tiempo usando un hilo daemon."""
         result: list = [None]
         error: list = [None]
 
@@ -222,9 +214,10 @@ class UsigGeocoder(Geocoder):
     min_delay = 0.34
     endpoint = "https://servicios.usig.buenosaires.gob.ar/normalizar/"
     rate_limit_doc = (
-        "Servicio publico del GCBA, sin key. Sin limite estricto publicado; "
-        "pensado para direcciones de CABA. Devuelve varias coincidencias "
-        "(incluso de partidos del AMBA): se filtra cod_partido=='caba'."
+        "Servicio público del Gobierno de la Ciudad, sin necesidad de clave. "
+        "No tiene un límite estricto publicado y está pensado para direcciones "
+        "de la ciudad. Devuelve varias coincidencias, incluso del conurbano, "
+        "así que filtramos solo las de capital federal."
     )
 
     def __init__(self):
@@ -248,7 +241,7 @@ class UsigGeocoder(Geocoder):
         c = d["coordenadas"]
         srid = c.get("srid")
         if srid not in (4326, "4326", None):
-            raise ValueError(f"USIG devolvio srid no soportado: {srid}")
+            raise ValueError(f"La API devolvió un sistema de coordenadas no soportado: {srid}")
         return float(c["y"]), float(c["x"]), d.get("direccion"), d
 
 
@@ -257,8 +250,9 @@ class GeorefGeocoder(Geocoder):
     min_delay = 0.2
     endpoint = "https://apis.datos.gob.ar/georef/api/direcciones"
     rate_limit_doc = (
-        "API abierta del Estado nacional, sin key. Sin limite estricto publicado; "
-        "recomienda el endpoint batch (POST, hasta ~1000 consultas) para volumen alto."
+        "API abierta del Estado nacional, sin necesidad de clave. No tiene un "
+        "límite estricto publicado. Para volumen alto recomienda usar el "
+        "endpoint en lote, que admite hasta unas mil consultas por pedido."
     )
 
     def __init__(self):
@@ -286,11 +280,10 @@ API_REGISTRY = {"usig": UsigGeocoder, "georef": GeorefGeocoder}
 APIS = ["usig", "georef"]
 
 
-# --------------------------------------------------------------------------- #
-# Carga, ejecucion y consolidacion
-# --------------------------------------------------------------------------- #
+# Carga, ejecución y consolidación
 def load_unique_addresses(df: pd.DataFrame) -> list[Address]:
-    """Direcciones unicas (calle+altura+barrio) con calle y altura presentes."""
+    """Devuelve las direcciones únicas, considerando calle, altura y barrio,
+    para las filas que tengan calle y altura informadas."""
     seen: dict[str, Address] = {}
     for calle, altura, barrio in zip(df["calle"], df["altura"], df["barrio_oficial"]):
         key = make_key(calle, altura, barrio)
@@ -310,13 +303,14 @@ def run_api(api_name: str, addresses: list[Address], refresh: bool) -> Cache:
     cache = Cache(CACHEDIR / f"{api_name}.json")
 
     def _stale(entry):
-        # los "error" se reintentan en cada corrida (DNS, 5xx, timeouts transitorios)
+        # Los errores se reintentan en cada corrida porque suelen ser problemas
+        # transitorios como caídas de DNS, errores 5xx o timeouts
         return entry is None or entry.get("status") == "error"
 
     pending = [a for a in addresses if refresh or _stale(cache.get(a.key))]
     print(
-        f"\n=== {api_name.upper()} ===  {len(pending)} a consultar, "
-        f"{len(addresses) - len(pending)} ya en cache  (delay {geo.min_delay}s)"
+        f"\nAPI {api_name}: {len(pending)} direcciones a consultar, "
+        f"{len(addresses) - len(pending)} ya están en el cache, con un delay de {geo.min_delay} segundos."
     )
     try:
         for i, addr in enumerate(pending, 1):
@@ -325,12 +319,12 @@ def run_api(api_name: str, addresses: list[Address], refresh: bool) -> Cache:
             if res["status"] == "ok":
                 msg = f"{res['lat']:.5f},{res['lon']:.5f}"
                 if res["in_caba_bbox"] is False:
-                    msg += "  [!] fuera de bbox CABA"
+                    msg += "  (queda fuera del bounding box de la ciudad)"
             else:
                 msg = res["status"] + (f" ({res['error']})" if res["error"] else "")
-            print(f"  [{api_name}] {i}/{len(pending)}  {addr.short:<28} -> {msg}")
+            print(f"  {api_name} {i}/{len(pending)}  {addr.short:<28}  {msg}")
     except KeyboardInterrupt:
-        print("\n[interrumpido] guardando cache...")
+        print("\nInterrumpido. Guardando el cache.")
     finally:
         cache.flush()
     return cache
@@ -394,32 +388,30 @@ def merge_back(df: pd.DataFrame, table: pd.DataFrame) -> pd.DataFrame:
     return out
 
 
-# --------------------------------------------------------------------------- #
 # Reporte
-# --------------------------------------------------------------------------- #
 def build_report(addresses, caches, table, meta) -> str:
     L: list[str] = []
-    L.append("# Reporte de geocodificacion de direcciones de CABA\n")
-    L.append(f"_Generado: {meta['ts']}_\n")
+    L.append("# Reporte de geocodificación de direcciones de la ciudad\n")
+    L.append(f"Generado el {meta['ts']}\n")
     L.append(
-        f"- Dataset: `{DATA.relative_to(ROOT)}` ({meta['total_rows']:,} filas, "
-        f"{meta['rows_with_addr']:,} con calle+altura)\n"
-        f"- Direcciones unicas (calle+altura+barrio): **{meta['n_unique']:,}**\n"
-        f"- Coordenadas: **WGS84 / EPSG:4326** (lat, lon)\n"
+        f"- Dataset con {meta['total_rows']:,} filas, de las cuales "
+        f"{meta['rows_with_addr']:,} tienen calle y altura informadas.\n"
+        f"- Direcciones únicas (combinando calle, altura y barrio): {meta['n_unique']:,}\n"
+        f"- Sistema de coordenadas: WGS84\n"
     )
 
     L.append("\n## 1. APIs usadas\n")
-    L.append("| API | Endpoint | Key | Delay | Reintentos |")
+    L.append("| API | Endpoint | Clave | Delay | Reintentos |")
     L.append("|---|---|---|---|---|")
     for api in APIS:
         g = API_REGISTRY[api]
-        L.append(f"| `{api}` | {g.endpoint} | no | {g.min_delay}s | {g.max_retries} |")
-    L.append("\n**Rate limits:**\n")
+        L.append(f"| {api} | {g.endpoint} | no | {g.min_delay}s | {g.max_retries} |")
+    L.append("\nLímites de uso:\n")
     for api in APIS:
-        L.append(f"- **{api}** — {API_REGISTRY[api].rate_limit_doc}")
+        L.append(f"- {api}: {API_REGISTRY[api].rate_limit_doc}")
 
     L.append("\n## 2. Resultados\n")
-    L.append("| API | Consultadas | OK | No encontradas | Errores | % exito | Resp. media |")
+    L.append("| API | Consultadas | Resueltas | No encontradas | Errores | Porcentaje de éxito | Respuesta promedio |")
     L.append("|---|---|---|---|---|---|---|")
     stats = {}
     for api in APIS:
@@ -433,64 +425,62 @@ def build_report(addresses, caches, table, meta) -> str:
         rate = f"{100*len(ok)/att:.1f}%" if att else "-"
         avg = f"{sum(times)/len(times):.2f}s" if times else "-"
         stats[api] = {"rate": len(ok) / att if att else 0}
-        L.append(f"| `{api}` | {att} | {len(ok)} | {len(nf)} | {len(err)} | {rate} | {avg} |")
+        L.append(f"| {api} | {att} | {len(ok)} | {len(nf)} | {len(err)} | {rate} | {avg} |")
 
-    L.append("\n## 3. Cross-validacion USIG vs Georef\n")
+    L.append("\n## 3. Cruce entre las dos fuentes\n")
     multi = table[table["n_ok"] >= 2]
     dists = [float(x) for x in multi["max_pairwise_m"].dropna().tolist()]
     if dists:
         within = lambda t: sum(1 for d in dists if d <= t)  # noqa: E731
-        L.append(f"{len(multi):,} direcciones resueltas por ambas APIs. Distancia entre fuentes:\n")
-        L.append("| metrica | valor |")
+        L.append(f"Hay {len(multi):,} direcciones resueltas por las dos APIs. Distancia entre fuentes:\n")
+        L.append("| Métrica | Valor |")
         L.append("|---|---|")
-        L.append(f"| mediana | {median(dists):.1f} m |")
-        L.append(f"| p90 | {percentile(dists, 0.9):.1f} m |")
-        L.append(f"| maxima | {max(dists):.1f} m |")
-        L.append(f"| <= 25 m (mismo portal) | {within(25):,}/{len(dists):,} |")
-        L.append(f"| <= 100 m (misma cuadra) | {within(100):,}/{len(dists):,} |")
-        L.append(f"| > 500 m (discrepan) | {sum(1 for d in dists if d > 500):,}/{len(dists):,} |")
+        L.append(f"| Mediana | {median(dists):.1f} metros |")
+        L.append(f"| Percentil 90 | {percentile(dists, 0.9):.1f} metros |")
+        L.append(f"| Máxima | {max(dists):.1f} metros |")
+        L.append(f"| Hasta 25 metros (mismo edificio) | {within(25):,} de {len(dists):,} |")
+        L.append(f"| Hasta 100 metros (misma cuadra) | {within(100):,} de {len(dists):,} |")
+        L.append(f"| Más de 500 metros (discrepan) | {sum(1 for d in dists if d > 500):,} de {len(dists):,} |")
 
     L.append("\n## 4. Ejemplos\n")
     ex = table.sort_values("n_ok", ascending=False).head(8)
-    L.append("| Direccion | Barrio | usig | georef | consenso | acuerdo |")
+    L.append("| Dirección | Barrio | Fuente 1 | Fuente 2 | Consenso | Acuerdo |")
     L.append("|---|---|---|---|---|---|")
     for _, r in ex.iterrows():
         cells = [f"{r['calle']} {r['altura']}", str(r["barrio"])]
         for api in APIS:
             lat, lon = r[f"{api}_lat"], r[f"{api}_lon"]
-            cells.append(f"{lat:.5f}, {lon:.5f}" if pd.notna(lat) else "—")
+            cells.append(f"{lat:.5f}, {lon:.5f}" if pd.notna(lat) else "-")
         if pd.notna(r["consensus_lat"]):
             cells.append(f"{r['consensus_lat']:.5f}, {r['consensus_lon']:.5f}")
         else:
-            cells.append("—")
-        cells.append(f"{r['max_pairwise_m']:.0f} m" if pd.notna(r["max_pairwise_m"]) else "—")
+            cells.append("-")
+        cells.append(f"{r['max_pairwise_m']:.0f} metros" if pd.notna(r["max_pairwise_m"]) else "-")
         L.append("| " + " | ".join(cells) + " |")
 
     L.append("\n## 5. Archivos generados\n")
-    L.append("- `data/geocoding/cache/<api>.json` — respuesta cruda por API (reanudable).")
-    L.append("- `data/geocoding/geocoded_sample.tsv` — lat/lon por API + consenso + acuerdo.")
-    L.append("- `data/geocoding/dataframe_con_coords.tsv` — dataframe_limpio + lat/lon de consenso.")
-    L.append("- `data/geocoding/report.md` — este reporte.\n")
+    L.append("- Cache crudo por API en formato JSON, reanudable.")
+    L.append("- Tabla con las coordenadas por API más el consenso y el acuerdo entre fuentes.")
+    L.append("- Dataframe limpio enriquecido con las coordenadas del consenso.")
+    L.append("- Este reporte.\n")
     return "\n".join(L) + "\n"
 
 
-# --------------------------------------------------------------------------- #
 # Main
-# --------------------------------------------------------------------------- #
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--refresh", action="store_true", help="ignorar cache y volver a consultar")
-    ap.add_argument("--report-only", action="store_true", help="no consultar, solo regenerar reporte")
+    ap.add_argument("--refresh", action="store_true", help="ignorar el cache y volver a consultar todo")
+    ap.add_argument("--report-only", action="store_true", help="no consultar las APIs, solo regenerar el reporte")
     args = ap.parse_args()
 
     OUTDIR.mkdir(parents=True, exist_ok=True)
     CACHEDIR.mkdir(parents=True, exist_ok=True)
 
-    print(f"Cargando {DATA.relative_to(ROOT)} ...")
+    print(f"Cargando el dataset de entrada.")
     df = pd.read_csv(DATA, sep="\t")
     rows_with_addr = int((df["calle"].notna() & df["altura"].notna()).sum())
     addresses = load_unique_addresses(df)
-    print(f"  {len(df):,} filas, {len(addresses):,} direcciones unicas")
+    print(f"  El dataset tiene {len(df):,} filas y {len(addresses):,} direcciones únicas.")
 
     caches: dict[str, Cache] = {}
     if args.report_only:
@@ -500,14 +490,14 @@ def main() -> None:
         for api in APIS:
             caches[api] = run_api(api, addresses, args.refresh)
 
-    print("\nConsolidando ...")
+    print("\nConsolidando los resultados.")
     table = consolidate(addresses, caches)
     table.to_csv(OUTDIR / "geocoded_sample.tsv", sep="\t", index=False, encoding="utf-8")
 
     merged = merge_back(df, table)
     merged.to_csv(OUTDIR / "dataframe_con_coords.tsv", sep="\t", index=False, encoding="utf-8")
     n_filled = int(merged["lat"].notna().sum())
-    print(f"  dataframe_con_coords.tsv: {n_filled:,}/{len(merged):,} filas con coordenadas")
+    print(f"  Quedaron {n_filled:,} de {len(merged):,} filas con coordenadas asignadas.")
 
     meta = {
         "ts": datetime.now().strftime("%Y-%m-%d %H:%M"),
@@ -516,7 +506,7 @@ def main() -> None:
         "n_unique": len(addresses),
     }
     (OUTDIR / "report.md").write_text(build_report(addresses, caches, table, meta), encoding="utf-8")
-    print(f"\nListo. Reporte en {(OUTDIR / 'report.md').relative_to(ROOT)}")
+    print(f"\nListo. El reporte quedó guardado en la carpeta de salida.")
 
 
 if __name__ == "__main__":
