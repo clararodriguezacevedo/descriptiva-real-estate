@@ -37,7 +37,7 @@ if hasattr(sys.stdout, "reconfigure"):
 
 
 ROOT = Path(__file__).resolve().parents[1]
-DATA = ROOT / "data" / "raw" / "dataframe_limpio.tsv"
+DATA = ROOT / "data" / "processed" / "dataframe_limpio.tsv"
 OUTDIR = ROOT / "data" / "geocoding"
 CACHEDIR = OUTDIR / "cache"
 
