@@ -111,9 +111,9 @@ APIs y datasets que tenemos planificado utilizar para realizar un análisis más
   * los 6 tsv extraídos (venta, alquiler, alquiler temporal; de argenprop y zonaprop)  
   * dataframe\_maestro.tsv (utiliza Git Large File Storage)  
 * notebooks  
-  * argenprop → argenprop\_scraper.ipynb \+ README  
-  * zonaprop → zonaprop\_scaper.ipynb \+ README  
-  * dataframe\_maestro.ipynb → donde concatenamos los 6 tsv
+  * argenprop  argenprop\_scraper.ipynb \+ README  
+  * zonaprop  zonaprop\_scaper.ipynb \+ README  
+  * dataframe\_maestro.ipynb  donde concatenamos los 6 tsv
 
 # **6\. Ejecución del Web Scraping**
 
@@ -198,14 +198,14 @@ Por eso mismo, decidimos abandonar el scraper que habíamos encontrado y optamos
 
 De esta forma, pudimos scrapear las primeras páginas de Zonaprop, y notamos problemas con cómo se cargaban las direcciones, alturas y pisos: en dirección quedaba algo como ‘Belgrano, Capital Federal’, y altura y piso quedaban vacíos. Descubrimos entonces, que la direccion no se guardaba en POSTING\_CARD\_LOCATION, sino que estaba en location-address. De esa forma, pudimos extraer la información necesaria, y decidimos sumar los barrios que estaban en POSTING\_CARD\_LOCATION. Igualmente, nos encontramos con casos particulares, que generaban complicaciones, y modificamos parse\_adress para poder manejarlos: 
 
-* "Bolivia al 4400" → debíamos limpiar el "al".  
-* "SAN JOSE 445\. Entre Belgrano y Venezuela" → el punto después del número rompía el regex.  
-* "11 de Septiembre de 1888 2231" → el año 1888 era confundido con la altura y el 11 se borraba.  
-* "Torres del Yacht \- Juana Manso al 600 \- 2 Ambientes" → extraer el fragmento correcto cuando hay guiones.  
-* "Alvear Tower \- Azucena Villaflor" → devolver None cuando no hay número válido de altura.  
-* "El Faro \- 3 Ambientes" → descartar números menores a 100, ya que probablemente no sean una dirección, sino una descripción del departamento, puesta en el lugar equivocado.  
-* "Junín 1615 piso 13" y "Junín 1615 PB" → capturar el piso correctamente.  
-* "2º piso" → limpiar el símbolo de ordinal.
+* "Bolivia al 4400"  debíamos limpiar el "al".  
+* "SAN JOSE 445\. Entre Belgrano y Venezuela"  el punto después del número rompía el regex.  
+* "11 de Septiembre de 1888 2231"  el año 1888 era confundido con la altura y el 11 se borraba.  
+* "Torres del Yacht \- Juana Manso al 600 \- 2 Ambientes"  extraer el fragmento correcto cuando hay guiones.  
+* "Alvear Tower \- Azucena Villaflor"  devolver None cuando no hay número válido de altura.  
+* "El Faro \- 3 Ambientes"  descartar números menores a 100, ya que probablemente no sean una dirección, sino una descripción del departamento, puesta en el lugar equivocado.  
+* "Junín 1615 piso 13" y "Junín 1615 PB"  capturar el piso correctamente.  
+* "2º piso"  limpiar el símbolo de ordinal.
 
 	
 
