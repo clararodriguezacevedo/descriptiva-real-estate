@@ -1,0 +1,13 @@
+﻿variable,tipo_modelo,coeficiente,importancia_permutacion,signo
+score_antiguedad,ridge_precio_m2,-0.7571,7.8624,negativo
+antiguedad_años,ridge_precio_m2,0.5494,4.1375,positivo
+nivel_socioeconomico,ridge_precio_m2,0.0499,0.0364,positivo
+indice_lujo,ridge_precio_m2,0.0203,0.0058,positivo
+cluster_1.0,ridge_precio_m2,0.0158,0.0039,positivo
+cluster_3.0,ridge_precio_m2,0.0113,0.0016,positivo
+dist_tren_km,ridge_precio_m2,-0.007,0.0009,negativo
+dist_subte_km,ridge_precio_m2,-0.0059,0.0004,negativo
+cluster_2.0,ridge_precio_m2,0.0054,0.0006,positivo
+dist_verde_km,ridge_precio_m2,0.005,0.0003,positivo
+m2_total,ridge_precio_m2,0.0023,0.0001,positivo
+indice_confort,ridge_precio_m2,-0.0006,0.0,negativo

@@ -1,0 +1,5 @@
+﻿cluster_id,n_propiedades,precio_m2_mediano_usd,precio_venta_mediano_usd,m2_mediano,ambientes_mediano,antiguedad_mediana,indice_lujo_mediano,indice_confort_mediano,dist_subte_mediana_km,dist_verde_mediana_km,dist_tren_mediana_km,rent_neta_lp_mediana_pct,rent_neta_temp_mediana_pct,cluster_nombre,color_hex
+0,17556,26.12,2000.0,50.0,2.0,40.0,-0.22,0.17,0.37,0.23,1.39,5.0,4.0,Cluster 0: departamentos antiguos,#1f77b4
+1,4349,1885.25,85000.0,49.0,2.0,10.0,-0.18,0.17,3.06,0.2,0.88,5.0,4.0,Cluster 1: departamentos lejos del subte,#ff7f0e
+2,18083,2131.58,85000.0,47.0,2.0,13.0,0.01,0.17,0.57,0.18,0.66,5.0,3.0,Cluster 2: departamentos en barrios de alto nivel socioeconómico,#2ca02c
+3,4150,2894.8,465000.0,175.0,4.0,35.0,0.22,0.17,0.63,0.16,0.9,4.0,3.0,"Cluster 3: departamentos amplios, antiguos, en barrios de alto nivel socioeconómico",#d62728
