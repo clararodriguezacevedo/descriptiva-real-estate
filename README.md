@@ -1,9 +1,9 @@
 
-**15/04/2026**
+**11/06/2026**
 
 **Analítica Descriptiva**
 
-**Trabajo Práctico N°1 : Primera pre-entrega**
+**Trabajo Práctico N°3 : Técnicas Analíticas Avanzadas, Segmentación y Construcción de Insights Estratégicos**
 
 | Grupo N°1 |  |
 | ----- | :---: |
@@ -11,206 +11,170 @@
 | Valentina Contrera | 66577 |
 | Valentina Ludmila Darchuk | 66009 |
 
-# 
+# Análisis del Mercado Inmobiliario de CABA
 
-# **1\. Contexto y Situación de Negocio**
+Trabajo práctico de análisis de datos sobre el mercado inmobiliario de la Ciudad Autónoma de Buenos Aires con el objetivo de realizar una recomendación informada hacia un inversor amateur interesado en comprar un departamenteo en CABA. El proyecto cubre el ciclo completo: scraping de datos, limpieza, análisis exploratorio, geocoding, validación de hipótesis, reducción de dimensionalidad, clustering, modelos predictivos y exportación a un dashboard en Power BI.
 
-Hoy en día, una de las formas más comunes de invertir es hacerlo en Real Estate. La compra, venta y alquiler de propiedades son operaciones que se realizan constantemente. Para un inversionista nuevo en el mercado del Real Estate, comenzar puede ser intimidante sin suficiente conocimiento o experiencia previa. Por eso mismo, decidimos realizar un análisis que responda la siguiente pregunta: ¿Qué departamento conviene comprar para obtener el retorno de inversión más rápido según un barrio determinado? Asimismo, también queremos responder: ¿Qué tipo de alquiler es más conveniente? ¿Un alquiler temporario o un alquiler a largo plazo? 
+---
 
-## **1.1 Contexto**
+## Estructura del repositorio
 
-El mercado inmobiliario porteño es confuso: la información de precios de venta, alquileres tradicionales y alquileres temporarios está dispersa en distintos portales, en distintas monedas y con criterios de publicación inconsistentes. El inversor no tiene visibilidad real sobre cuál barrio, qué tipología y qué modalidad de alquiler maximiza su rentabilidad para un departamento.
+```
+descriptiva-real-estate/
+├── data/
+│   ├── raw/                  # Datos crudos obtenidos por scraping
+│   ├── geocoding/            # GeoJSONs y dataframe con coordenadas por propiedad
+│   └── processed/            # Dataframes limpios, KPIs y archivos listos para análisis
+├── notebooks/
+│   ├── argenprop/            # Scraper de ArgenProp (ver README interno)
+│   ├── zonaprop/             # Scraper de ZonaProp (ver README interno)
+│   ├── 01_dataframe_maestro.ipynb
+│   ├── 02_data_cleaning_and_normalization.ipynb
+│   ├── 03_eda_and_insights.ipynb
+│   ├── 04_kpi_pipeline.ipynb
+│   ├── 05_geocoding.ipynb
+│   ├── TP3_Grupo_1.ipynb
+│   ├── TP3_hipotesis.ipynb
+│   └── TP3_power_bi_export.ipynb
+```
 
-## **1.2 Perfil del Cliente (Interlocutor)**
+---
 
-**Inversor Independiente Principiante**  
-Nuestro cliente objetivo es una persona física que busca su primera inversión en un departamento en la Ciudad de Buenos Aires. Su duda central no es solo dónde comprar, sino también cómo alquilar: bajo la modalidad tradicional (contrato fijo con un inquilino) o bajo la modalidad temporal. Necesita evidencia cuantitativa para tomar una decisión estratégica antes de comprometer capital. Este perfil no incluye a personas especialistas en el mercado, personas con amplia experiencia previa o expertos en Real Estate. 
+## Scraping
 
-# **2\. Preguntas Clave por Nivel de Análisis**
+Los datos provienen de dos portales inmobiliarios argentinos: **ArgenProp** y **ZonaProp**. Cada uno tiene su propio scraper y README con instrucciones de uso en las carpetas `notebooks/argenprop/` y `notebooks/zonaprop/` respectivamente. Los archivos resultantes del scraping se guardan en `data/raw/`.
 
-## **2.1 Nivel Descriptivo \- ¿Qué está pasando?**
+---
 
-* ¿Cuál es el precio del metro cuadrado en venta de departamentos por barrio?  
-* ¿Cuál es el precio mensual de alquiler a largo plazo por barrio?  
-* ¿Cuáles son las diferencias entre las propiedades que se suelen alquilar a largo y a corto plazo?
+## Pipeline de notebooks
 
-## **2.2 Nivel Diagnóstico \- ¿Por qué está pasando?**
+### `01_dataframe_maestro`
+Une los TSVs producidos por ambos scrapers y construye el dataframe maestro unificado.
 
-* ¿Qué suele hacer que varíen los precios del metro cuadrado en venta dentro del mismo barrio?  
-* Misma pregunta, pero con precios de alquiler.  
-* ¿Hay barrios en los cuales hay una diferencia importante de oferta entre alquileres temporarios y alquileres a largo plazo? ¿Cuáles son las diferencias de características entre ambos?
+### `02_data_cleaning_and_normalization`
+Limpieza integral de datos: eliminación de duplicados, tratamiento de outliers y gestión de valores faltantes a partir de las monedas utilizadas (ARS y USD) y las operaciones (venta, alquiler temporario, alquiler largo plazo). 
 
-## **2.3 Nivel Predictivo \- ¿Qué va a pasar?**
+### `03_eda_and_insights`
+Análisis exploratorio de los datos. Incluye análisis geográfico de precios, distribución por barrio, tipo de operación y características de las propiedades.
 
-* Dado el perfil de cierta propiedad, ¿cuántos meses tardaría en recuperarse la inversión inicial? ¿Con alquiler a largo plazo? ¿Y con alquiler temporal?   
-* ¿Podemos estimar la rentabilidad esperada de una propiedad no listada en Argenprop o Zonaprop, basándonos en sus vecinos comparables?
+### `04_kpi_pipeline`
+Cálculo de KPIs (detallados en README_TP1) y exportación a un dataframe consolidado.
 
-## **2.4 Nivel Prescriptivo \- ¿Qué deberíamos hacer?**
+### `05_geocoding`
+Resolución de coordenadas geográficas (latitud y longitud) a partir de calles y alturas de cada propiedad, usando dos APIs oficiales argentinas. El consenso entre ambas fuentes se guarda en `data/geocoding/`.
 
-* ¿Qué barrio y tipología específica maximiza la rentabilidad bruta para el inversor según su presupuesto?  
-* ¿En qué zonas conviene optar por alquiler temporal sobre tradicional, y en cuáles no vale la pena la complejidad operativa?
+---
 
-# **3\. Definición de KPIs**
+## Entrega 3 — Notebook principal: `TP3_Grupo_1`
 
-Los siguientes indicadores son calculados por barrio, con precios normalizados a USD:
+Este es el notebook central de la tercera entrega. Integra todos los análisis avanzados del proyecto.
 
-| \# | KPI | Fórmula | Propósito |
-| :---- | :---- | :---- | :---- |
-| 1 | Rentabilidad Bruta Largo Plazo | (Alquiler Mensual Mediano × 12\) / Precio Venta Mediano × 100 | Rendimiento bruto anual sobre el capital invertido vía alquiler tradicional |
-| 2 | Recupero de Inversión | Precio Venta / (Alquiler Mensual × 12\) | Años necesarios para recuperar la inversión; es el inverso del KPI 1 |
-| 3 | Precio por m² | Precio Publicado / m² — mediana por barrio y tipo de operación | Normaliza el valor para comparar propiedades entre barrios |
-| 4 | Rentabilidad Neta Largo Plazo | (Alquiler Anual − Expensas Anuales del Propietario\) / Precio Venta × 100 | Rentabilidad real descontando expensas en los casos donde las paga el propietario |
-| 5 | Precio/m² Relativo por Barrio | Precio/m² de la propiedad / Mediana Precio/m² de su barrio | Identifica propiedades por debajo de la mediana del barrio (oportunidades de compra\) |
-| 6 | Rentabilidad Bruta Temporario | (Alquiler Mensual Mediano Temporario × 12\) / Precio Venta Mediano × 100 | Rendimiento bruto anual si se alquila de forma temporaria |
-| 7 | Índice Bruto Modalidad Óptima | Rentabilidad Bruta Temporario / Rentabilidad Bruta Largo Plazo | Índice > 1 indica que el temporario supera al largo plazo en términos brutos |
-| 8 | Rentabilidad Neta Temporario | (Ingreso Anual Temporario − Expensas Anuales del Propietario\) / Precio Venta × 100 | Rentabilidad real temporaria; en Airbnb el propietario suele pagar las expensas, por lo que se descuentan en casi todos los casos |
-| 9 | Índice Neto Modalidad Óptima | Rentabilidad Neta Temporario / Rentabilidad Neta Largo Plazo | Índice > 1 indica que el temporario supera al largo plazo en términos netos |
+### 1. Setup e importación de datos
+Carga del dataset enriquecido con coordenadas. Normalización de nombres de barrios para alinear con el GeoJSON oficial. Se descarta un subconjunto muy pequeño de ventas publicadas en pesos por inconsistencias de precio. Se agrega una columna con todos los precios convertidos a dólares, usando un tipo de cambio cacheado localmente para garantizar reproducibilidad entre corridas.
 
-# **4\. Hipótesis Iniciales a Validar**
+### 2. Enriquecimiento espacial
+Para cada propiedad con coordenadas resueltas se calculan tres distancias geográficas mediante aproximación euclidiana corregida por latitud, válida para distancias cortas dentro de la ciudad:
 
-1. En los barrios más turísticos, la rentabilidad neta temporaria va a ser más que la rentabilidad neta a largo plazo, con una diferencia estadísticamente significativa.  
-2. Los barrios con mayor precio de venta por m² no van a ser los que ofrezcan la mayor rentabilidad neta. Si no, se espera que barrios de precio intermedio (como Caballito, Villa Crespo o Almagro) tengan una rentabilidad neta mayor estadísticamente significativa.  
-3. La presencia de amenities y extras incrementa el precio de venta con respecto a propiedades equivalentes sin ellos, pero estos aumentos no se reflejan en el precio de alquiler (aumentan las expensas pero no el alquiler). Se puede hacer un análisis de ANOVA.  
-4. La cercanía a estaciones de subte genera un aumento estadísticamente significativo en el valor del m².
+- **Distancia al subte más cercano**: descargada desde datos abiertos del GCBA. Sirve como proxy de accesibilidad al transporte público.
+- **Distancia al espacio verde más cercano**: proxy de calidad ambiental.
+- **Distancia a la estación de tren más cercana**: captura accesibilidad en barrios con menor cobertura de subte.
 
-# **5\. Fuentes de Datos**
+Adicionalmente, se asigna a cada propiedad el **nivel socioeconómico de su barrio** (escala ordinal del 1 al 5) basado en clasificaciones del GCBA y datos del censo.
 
-## **5.1 Fuentes Primarias (Web Scraping)**
+Se incluye una revisión de la cobertura del geocoding por barrio, dejando documentado el sesgo potencial en zonas con menos coordenadas resueltas (Puerto Madero es el de menor cobertura con un 68%).
 
-Los siguientes son dos portales inmobiliarios que muestran la oferta de distintos departamentos en venta, alquiler y alquiler temporal en Argentina. 
+Se generan mapas coropléticos con la distribución del precio por metro cuadrado y la distancia al subte por barrio. Al final de esta sección se guarda un checkpoint (`checkpoint_post_enriquecimiento.pkl`) que permite ejecutar los notebooks de hipótesis y exportación de forma independiente.
 
-**Argenprop**  
-URLs: [Venta](https://www.argenprop.com/departamentos/venta/capital-federal) \- [Alquiler](https://www.argenprop.com/departamentos/alquiler/capital-federal) \- [Alquiler Temporal](https://www.argenprop.com/departamentos/alquiler-temporal/capital-federal)  
-Datos: precio, expensas, dirección, altura,  m², ambientes, piso, amenities, descripción.  
-Frecuencia: extracción única \+ actualización semanal.  
-Tipo de datos: numéricos, textuales, dicotómicos.
+### 3. Validación de hipótesis
+Las cuatro hipótesis del trabajo se validan en el notebook `TP3_hipotesis.ipynb` (ver más abajo), que carga el checkpoint generado en la sección anterior.
 
-**ZonaProp**  
-URLs: [Venta](https://www.zonaprop.com.ar/departamentos-venta-capital-federal.html) \- [Alquiler](https://www.zonaprop.com.ar/departamentos-alquiler-capital-federal.html) \- [Alquiler Temporal](https://www.zonaprop.com.ar/departamentos-alquiler-temporal-capital-federal.html)  
-Datos: idem Argenprop. Permite cross-validación de precios.  
-Frecuencia: extracción única \+ actualización semanal.  
-Tipo de datos: numéricos, textuales, dicotómicos.
+### 4. Reducción de dimensionalidad e índices sintéticos
+Para reducir multicolinealidad y facilitar la interpretación de los modelos, se construyen tres índices:
 
-## **5.2 Fuentes Secundarias (APIs y Datasets Públicos)**
+**PCA sobre variables continuas** (precio/m², superficie, antigüedad): se retienen dos componentes que explican aproximadamente el 80% de la varianza.
+- *PC1 — Índice de precio y superficie*: sube con propiedades grandes y caras por metro cuadrado. Perfil de gama media-alta.
+- *PC2 — Score de Antigüedad*: sube con propiedades viejas y relativamente baratas. Se normaliza al rango [0, 1] como feature explícita para los modelos.
 
-APIs y datasets que tenemos planificado utilizar para realizar un análisis más profundo. 
+**MCA sobre amenities binarios**: equivalente del PCA para variables categóricas, aplicado sobre 26 amenities binarios. El primer componente se interpreta como **Índice de Lujo** (captura amenities premium: pileta, gimnasio, SUM, etc.).
 
-| Nombre | URL | Datos |
-| :---- | :---- | :---- |
-| GCBA \- Comunas y Barrios | data.buenosaires.gob.ar | Polígonos GeoJSON de barrios y comunas para análisis espacial |
-| BCRA \- Tipo de Cambio | estadisticasbcra.com.ar / API BCRA | Serie temporal USD/ARS para normalizar precios en pesos |
-| GCBA: Estaciones de subte | https://cdn.buenosaires.gob.ar/datosabiertos/datasets/sbase/subte-estaciones/estaciones-de-subte.csv | Listado de las latitudes y longitudes de las estaciones de cada línea.  |
+**Índice de Confort**: construido de forma explícita como la proporción de seis amenities de comodidad cotidiana presentes en la propiedad (aire acondicionado, ascensor, agua caliente central, lavadero, portero, losa central). Complementa al Índice de Lujo capturando una dimensión distinta del valor.
 
-## 
+Los tres índices se validan contra el precio por metro cuadrado en ventas: Lujo y Confort muestran correlaciones positivas significativas; el Score de Antigüedad muestra correlación negativa, consistente con su construcción.
 
-## **5.3 Estructura del Repositorio**
+### 5. Clustering para descubrir micro-mercados
+Se aplica K-Means sobre un conjunto de variables que cubre tres dimensiones: características de la propiedad (precio/m², superficie, antigüedad) y entorno espacial (distancias al subte, espacios verdes y tren, nivel socioeconómico del barrio).
 
-**Arquitectura GitHub**: **descriptiva-real-estate**
+La cantidad de clusters se selecciona con tres métricas complementarias: método del codo, score de silueta e índice de Calinski-Harabasz. Se elige **k=4** como punto de quiebre más claro del codo, con una diferencia marginal respecto a k=5 en las otras métricas que no justifica la pérdida de interpretabilidad.
 
-* data/raw           
-  * los 6 tsv extraídos (venta, alquiler, alquiler temporal; de argenprop y zonaprop)  
-  * dataframe\_maestro.tsv (utiliza Git Large File Storage)  
-* notebooks  
-  * argenprop  argenprop\_scraper.ipynb \+ README  
-  * zonaprop  zonaprop\_scaper.ipynb \+ README  
-  * dataframe\_maestro.ipynb  donde concatenamos los 6 tsv
+A cada cluster se le asigna un nombre comercial descriptivo generado dinámicamente a partir de sus medianas (por ejemplo: "departamentos compactos, antiguos, lejos del subte"). Estos nombres se usan luego como variable en los modelos y en el dashboard.
 
-# **6\. Ejecución del Web Scraping**
+Se incluye también una corrida de **DBSCAN** como sanity check: identifica outliers que K-Means asigna a algún cluster por diseño, y confirma que K-Means es la opción correcta para la segmentación principal de negocio. 
 
-Esta sección documenta el proceso de extracción de datos, las decisiones de diseño tomadas, los cambios realizados al scraper original provisto por la cátedra, y la arquitectura final del pipeline de datos.
+Los resultados se visualizan con: heatmap de perfiles por cluster, scatter sobre el espacio del PCA, mapa coroplético del cluster dominante por barrio, mapa de rentabilidad neta a largo plazo, y scatter a nivel propiedad sobre el polígono de CABA.
 
-## **6.1 Fuentes de Datos Scrapeadas**
+### 6. Modelos explicativos
+Se construyen dos modelos con distinto target:
 
-| Portal | URL base | Librería HTTP |
-| :---- | :---- | :---- |
-| Argenprop | argenprop.com/departamentos/{op}/capital-federal | requests |
-| ZonaProp | zonaprop.com.ar/departamentos-{op}-capital-federal | curl\_cffi (impersonate) |
+**Precio por metro cuadrado (target continuo)**: se comparan tres modelos lineales — OLS, Ridge (L2) y Lasso (L1) — evaluados por R² y MAE en test y con validación cruzada de 5 folds. Se complementan con un árbol de decisión de profundidad 4 para generar reglas interpretables. El análisis incluye comparación de coeficientes estandarizados entre los tres modelos, permutation importance (caída de R² al aleatorizar cada variable) y curvas de sensibilidad por variable (variando cada feature entre sus percentiles 5 y 95, con el resto fijo en la mediana).
 
-Ambos portales exponen sus listings como HTML lo que permite scraping directo sin navegador. Sin embargo, ZonaProp detecta y bloquea librerías HTTP convencionales, por lo cual la solución fue reemplazar requests por curl\_cffi con impersonate='chrome120', que evita el bloqueo realizado por la página sin necesidad de Playwright (que consume más memoria y es más lento).
+**Modalidad de alquiler (target binario)**: la variable objetivo es si el alquiler temporario rinde más que el largo plazo en el barrio de la propiedad. Se comparan regresión logística y árbol de clasificación. Se reportan matriz de confusión, classification report, AUC-ROC y odds ratios estandarizados.
 
-## **6.2 Cambios al Scraper Original (Argenprop)**
+La sección cierra con una **tabla de recomendación por barrio** con la modalidad sugerida, la rentabilidad esperada y el cluster dominante, orientada al inversor principiante.
 
-El scraper provisto por la cátedra fue el punto de partida. A continuación se detallan todas las modificaciones realizadas: 
+### 7. Conclusiones, limitaciones y próximos pasos
 
-| Área | Versión mejorada | Impacto |
-| :---- | :---- | :---- |
-| Datos de extracción | Agrega Fecha\_Scraping, Posting\_ID, Sitio, Operación en cada fila | Información extra que permite comparar entre sitios y fechas |
-| Modificación función parse\_address() | Extrae piso del sufijo, ‘Piso N’, filtra guiones, descarta años históricos (1800–1950) (por ejemplo, para calles como ‘11 de Septiembre de 1888’), itera todos los números buscando altura \>= 100\. | Mejor obtención de datos sobre la Calle y arreglo de altura incorrecta en las direcciones.  |
-| Extracción de barrio | Logramos identificar el barrio de la propiedad.  | Permite filtrar y agrupar por barrio |
-| Amenities (conteo) | Suma cuántos amenities distintos aparecen. | Permite un contador de amenities por propiedad, no solo presencia. |
-| Seguridad (vocabulario) | Suma portero, guardia, cámara, monitoreo | Permite detectar la seguridad utilizando otro vocabulario.  |
-| Luminoso (vocabulario) | Suma muy soleado, soleado | Captura más variantes del lenguaje refiriéndose a la luminosidad.  |
-| Limpieza de N/A | df.replace('N/A', None)  | Evita que 'N/A' sea tratado como texto en análisis numéricos. |
-| Parámetros de entrada | run\_scraper\_argenprop(enlace, operacion, max\_pages, start\_page), todos parametrizables | Reutilizable para venta, alquiler y temporario sin modificar el código. |
-| Manejo de CAPTCHA | Ante la aparición de un CAPTCHA, se guarda el proceso en un TSV, se muestran instrucciones para resolver el CAPTCHA, se solicitan las cookies y se retoma el scraping. | Argenprop presenta CAPTCHAs cada 100 páginas aproximadamente que frenan el scraping. |
+Principales hallazgos:
+- La cercanía al subte incide positivamente en el precio por metro cuadrado.
+- Los barrios con mayor precio/m² no son los más rentables: hay correlación negativa entre precio y rentabilidad neta a largo plazo, lo que orienta al inversor hacia gama media.
+- Los amenities tienen mayor peso en el precio de venta que en el de alquiler.
+- Los tres índices sintéticos (Lujo, Confort, Antigüedad) capturan dimensiones distintas del valor de una propiedad y resultan relevantes en los modelos.
+- El clustering identifica micro-mercados con perfiles de rentabilidad diferenciados.
 
-**6.3 Cambios para adaptar al scraper a Zonaprop:**  
-La siguiente tabla detalla cada modificación realizada al scraper de Argenprop para construir el de ZonaProp.
+Limitaciones documentadas: base de un solo período de scraping (sin análisis temporal), muestra pequeña de barrios turísticos para algunas hipótesis, nivel socioeconómico asignado a nivel barrio y no por radio censal, y dependencia del tipo de cambio del día de ejecución para las comparaciones absolutas en dólares.
 
-| Área | ZonaProp | Motivo del cambio |
-| :---- | :---- | :---- |
-| Librería HTTP | curl\_cffi con impersonate='chrome120' | Evita el bloqueo adicional que realiza Zonaprop.  |
-| Etiquetas | Cambios en la forma de extraer información como el precio, expensas, dirección, barrio, descripción.  | Argenprop utiliza clases CSS para etiquetar los elementos HTML de su web, mientras que Zonaprop utiliza atributos data-qa. Esto requiere ciertas modificaciones en el código para extraer la información.  |
-| Modificación función parse\_address() | Agrega manejo de 'al' previo al número, guiones complejos con nombre de edificio, y piso inline sin coma | Zonaprop utiliza otro formato de escritura al mencionar las direcciones de las propiedades.  |
-| Formato de paginación | Ajustes al formato de paginación.  | Cada portal usa una convención distinta para construir las URLs de páginas sucesivas |
-| Delay entre páginas | Aumento del delay entre páginas. ‘time.sleep(2)’ | ZonaProp es más agresivo en la detección de patrones de scraping. Por eso, un delay mayor reduce el riesgo de bloqueo por frecuencia. |
+### 8. Exportación para Power BI
+La exportación de archivos vive en `TP3_power_bi_export.ipynb`, que carga el checkpoint del final de la sección 6 y produce los siguientes archivos para el dashboard:
 
-## 
+- `fact_propiedades.csv` — una fila por propiedad
+- `dim_barrios.csv` — una fila por barrio
+- `dim_clusters.csv` — perfil de cada cluster con nombre y color
+- `dim_puntos_referencia.csv` — estaciones de subte, tren y espacios verdes para overlay del mapa
+- `dim_coeficientes_modelo.csv` — coeficientes Ridge e importancia por permutación
+- `barrios.geojson` — polígonos de barrios para Shape Map
 
-## **6.4 Estructura del DataFrame Resultante**
+---
 
-Cada fila del DataFrame maestro corresponde a un aviso único. Las columnas son:
+## Entrega 3 — Notebooks complementarios
 
-| Campo | Tipo | Descripción |
-| :---- | :---- | :---- |
-| Fecha\_Scraping | date | Fecha de ejecución del scrapping (YYYY-MM-DD) |
-| Posting\_ID | string | ID único del aviso  |
-| Sitio | string | 'argenprop' o 'zonaprop' |
-| Operación | string | 'venta', 'alquiler' o 'temporal' |
-| Precio | string | Precio publicado (ej: 'USD 85.000', 'ARS 450.000') |
-| Expensas | string | Expensas mensuales cuando figuran en el aviso |
-| Calle | string | Nombre de la calle |
-| Altura | string | Número de puerta |
-| Piso | string | Piso del departamento, cuando figura |
-| Barrio | string | Barrio de CABA  |
-| Detalles | string | m², ambientes, baños, antigüedad (texto libre) |
-| Descripción | string | Descripción del aviso (texto libre) |
-| Link | string | URL completa del aviso |
-| \+ 8 features | int 0/1 | Variables binarias/numéricas para identificar presencia/ausencia de amenities, losa\_central, aire\_acond, apto\_credito, cochera, seguridad, luminoso y balcon\_aterrazado.  |
+### `TP3_hipotesis`
+Valida las cuatro hipótesis planteadas en la introducción del trabajo:
+1. Rentabilidad temporaria vs. largo plazo en barrios turísticos.
+2. Mayor precio por metro cuadrado no implica mayor rentabilidad.
+3. Los amenities aumentan el precio de venta pero no el de alquiler.
+4. La cercanía al subte impacta en el precio por metro cuadrado.
 
-## **Concatenamos las tablas obtenidas en un DataFrame Maestro:** 
+Carga el checkpoint `checkpoint_post_enriquecimiento.pkl` y puede ejecutarse de forma independiente una vez corrida la sección 2 de `TP3_Grupo_1`.
 
-## **6.5 Desafíos Técnicos y Soluciones**
+### `TP3_power_bi_export`
+Genera todos los archivos necesarios para el dashboard de Power BI. Requiere haber ejecutado `TP3_Grupo_1` hasta el final de la sección 6.
 
-	
+---
 
-En primer lugar, al intentar correr el scraper inicial nos encontramos con limitaciones al correrlo desde Google Colab. Por ejemplo, desde esta plataforma corría como máximo una página del sitio web. Por eso mismo, decidimos migrar el proyecto a Visual Studio Code. Luego de realizar las modificaciones detalladas previamente para recibir un output más completo, pudimos comprobar que el scraper funcionaba de igual manera para extraer datos de ventas, alquileres y alquileres temporales lo cual necesitábamos para cumplir con el objetivo del proyecto. 
+## Dependencias
 
-	
+```
+pandas, numpy, matplotlib, seaborn, geopandas, scikit-learn, prince, scipy, requests, geopy
+```
 
-El primer cambio importante que implementamos fue reemplazar la función ‘get\_description(url, headers)’. Esta función, hacía un request adicional a cada propiedad, para poder obtener los datos. Sin embargo, esto demoraba entre 1-2 minutos, para scrapear 60 propiedades, por lo que extraer los datos de decenas de miles de propiedades iba a demorar demasiado. Entonces, decidimos crear la función parse\_card, que toma los datos directamente de la tarjeta de la propiedad, que se ve en el menú general, sin tener que ingresar a cada publicación. Esto realmente agiliza el proceso, y en definitiva, obtenemos la misma información.
+Instalación rápida:
 
-Igualmente, para no limitarnos con la información brindada por Argenprop, quisimos incluir a Zonaprop a nuestra base de datos. Encontramos un scraper público en GitHub que funcionaba para los departamentos de CABA en venta del sitio web y entregaba resultados similares al del scraper anterior. De todas formas, al probarlo en los departamentos en alquiler o alquiler temporal, el scraper era incapaz de obtener adecuadamente los features como amenities, seguridad, etc. Probamos repetidamente sobrepasar los métodos adicionales de seguridad que tiene Zonaprop para obtener la información de estas variables críticas para nuestro análisis, pero no obtuvimos ningún resultado. 
+```bash
+pip install scikit-learn prince geopandas scipy matplotlib seaborn geopy
+```
 
+---
 
-Por eso mismo, decidimos abandonar el scraper que habíamos encontrado y optamos por intentar adaptar el scraper de Argenprop que habíamos optimizado. Primero, tuvimos que inspeccionar el HTML de Zonaprop, para descubrir su estructura, ya que no funcionaba como la de Argenprop. Entonces, vimos que ZonaProp usa atributos data-qa en lugar de clases CSS tradicionales, y definimos los selectores correctos, como POSTING\_CARD\_PRICE, POSTING\_CARD\_FEATURES, POSTING\_CARD\_LOCATION, etc. Luego de realizar los cambios correspondientes, nos encontramos con la misma complicación de antes, con los métodos de seguridad. Sin embargo, continuamos intentando solucionar este problema y finalmente lo logramos. Nuestra respuesta fue reemplazar la librería ‘requests’ por ‘curl\_cffi’ con ‘impersonate='chrome120’ que logra convencer a Zonaprop que somos un usuario más accediendo al sitio web.  
+## Reproducibilidad
 
+Todos los modelos y el clustering usan `SEED = 42` como semilla global, fijada tanto en `numpy.random` como en `random` y en el parámetro `random_state` de cada modelo de scikit-learn. El tipo de cambio se cachea localmente en `data/processed/tipo_cambio_cache.json` para que las conversiones a dólares sean consistentes entre corridas.
 
-De esta forma, pudimos scrapear las primeras páginas de Zonaprop, y notamos problemas con cómo se cargaban las direcciones, alturas y pisos: en dirección quedaba algo como ‘Belgrano, Capital Federal’, y altura y piso quedaban vacíos. Descubrimos entonces, que la direccion no se guardaba en POSTING\_CARD\_LOCATION, sino que estaba en location-address. De esa forma, pudimos extraer la información necesaria, y decidimos sumar los barrios que estaban en POSTING\_CARD\_LOCATION. Igualmente, nos encontramos con casos particulares, que generaban complicaciones, y modificamos parse\_adress para poder manejarlos: 
-
-* "Bolivia al 4400"  debíamos limpiar el "al".  
-* "SAN JOSE 445\. Entre Belgrano y Venezuela"  el punto después del número rompía el regex.  
-* "11 de Septiembre de 1888 2231"  el año 1888 era confundido con la altura y el 11 se borraba.  
-* "Torres del Yacht \- Juana Manso al 600 \- 2 Ambientes"  extraer el fragmento correcto cuando hay guiones.  
-* "Alvear Tower \- Azucena Villaflor"  devolver None cuando no hay número válido de altura.  
-* "El Faro \- 3 Ambientes"  descartar números menores a 100, ya que probablemente no sean una dirección, sino una descripción del departamento, puesta en el lugar equivocado.  
-* "Junín 1615 piso 13" y "Junín 1615 PB"  capturar el piso correctamente.  
-* "2º piso"  limpiar el símbolo de ordinal.
-
-	
-
-Finalmente, al momento de scrapear Argenprop, nos encontramos con una dificultad significativa. Como medida de seguridad, el sitio de Argenprop muestra un CAPTCHA a partir de la página 100 del sitio. Navegando manualmente, comprobamos que no es un rate-limit, sino estrictamente por el número de página. Para sortearlo, resolvimos el captcha manualmente, copiamos las cookies nuevas, y las insertamos en el scraper. Y de esta forma, conseguimos todos los datos que necesitábamos.
-
-## **7\. Tareas futuras**
-
-En la siguiente fase del proyecto, vamos a tener que realizar una limpieza de los datos del DataFrame maestro. Se estandarizarán los precios, extrayendo el valor numérico y la moneda (USD vs. ARS) en columnas separadas para permitir comparaciones. Se parseará el campo Detalles para extraer m² totales, cantidad de ambientes y baños como variables numéricas independientes. Se imputarán o descartarán registros con campos críticos nulos (precio, barrio, m²) según criterios a definir, y se eliminarán duplicados. Asimismo, agregaremos información adicional de las fuentes secundarias mencionadas en la sección 5.2: distancia a la estación de subte más cercana (calculada con la fórmula de Haversine sobre el dataset de SBASE), e histórico del tipo de cambio USD/ARS del BCRA para normalizar precios en pesos. Una vez que el dataframe esté completo, realizaremos un análisis exhaustivo y verificaremos nuestras teorías mediante pruebas estadísticas.  
