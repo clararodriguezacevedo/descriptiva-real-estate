@@ -33,9 +33,10 @@ descriptiva-real-estate/
 │   ├── 03_eda_and_insights.ipynb
 │   ├── 04_kpi_pipeline.ipynb
 │   ├── 05_geocoding.ipynb
-│   ├── TP3_Grupo_1.ipynb
-│   ├── TP3_hipotesis.ipynb
-│   └── TP3_power_bi_export.ipynb
+│   ├── 06_hipotesis.ipynb
+│   ├── 07_insights_y_modelos.ipynb
+│   └── 08_powerbi_export.ipynb
+|__dashboard.pbix
 ```
 
 ---
@@ -65,7 +66,7 @@ Resolución de coordenadas geográficas (latitud y longitud) a partir de calles 
 
 ---
 
-## Entrega 3 — Notebook principal: `TP3_Grupo_1`
+## Entrega 3 — Notebook principal: `07_insights_y_modelos`
 
 Este es el notebook central de la tercera entrega. Integra todos los análisis avanzados del proyecto.
 
@@ -86,7 +87,7 @@ Se incluye una revisión de la cobertura del geocoding por barrio, dejando docum
 Se generan mapas coropléticos con la distribución del precio por metro cuadrado y la distancia al subte por barrio. Al final de esta sección se guarda un checkpoint (`checkpoint_post_enriquecimiento.pkl`) que permite ejecutar los notebooks de hipótesis y exportación de forma independiente.
 
 ### 3. Validación de hipótesis
-Las cuatro hipótesis del trabajo se validan en el notebook `TP3_hipotesis.ipynb` (ver más abajo), que carga el checkpoint generado en la sección anterior.
+Las cuatro hipótesis del trabajo se validan en el notebook `06_hipotesis.ipynb` (ver más abajo), que carga el checkpoint generado en la sección anterior.
 
 ### 4. Reducción de dimensionalidad e índices sintéticos
 Para reducir multicolinealidad y facilitar la interpretación de los modelos, se construyen tres índices:
@@ -133,7 +134,7 @@ Principales hallazgos:
 Limitaciones documentadas: base de un solo período de scraping (sin análisis temporal), muestra pequeña de barrios turísticos para algunas hipótesis, nivel socioeconómico asignado a nivel barrio y no por radio censal, y dependencia del tipo de cambio del día de ejecución para las comparaciones absolutas en dólares.
 
 ### 8. Exportación para Power BI
-La exportación de archivos vive en `TP3_power_bi_export.ipynb`, que carga el checkpoint del final de la sección 6 y produce los siguientes archivos para el dashboard:
+La exportación de archivos vive en `08_powerbi_export.ipynb`, que carga el checkpoint del final de la sección 6 y produce los siguientes archivos para el dashboard:
 
 - `fact_propiedades.csv` — una fila por propiedad
 - `dim_barrios.csv` — una fila por barrio
@@ -142,21 +143,25 @@ La exportación de archivos vive en `TP3_power_bi_export.ipynb`, que carga el ch
 - `dim_coeficientes_modelo.csv` — coeficientes Ridge e importancia por permutación
 - `barrios.geojson` — polígonos de barrios para Shape Map
 
+El dashboard mismo se encuentra en `dashboard.pbix`
+
 ---
 
 ## Entrega 3 — Notebooks complementarios
 
-### `TP3_hipotesis`
+### `06_hipotesis`
 Valida las cuatro hipótesis planteadas en la introducción del trabajo:
 1. Rentabilidad temporaria vs. largo plazo en barrios turísticos.
 2. Mayor precio por metro cuadrado no implica mayor rentabilidad.
 3. Los amenities aumentan el precio de venta pero no el de alquiler.
 4. La cercanía al subte impacta en el precio por metro cuadrado.
 
-Carga el checkpoint `checkpoint_post_enriquecimiento.pkl` y puede ejecutarse de forma independiente una vez corrida la sección 2 de `TP3_Grupo_1`.
+Carga el checkpoint `checkpoint_post_enriquecimiento.pkl` y puede ejecutarse de forma independiente una vez corrida la sección 2 de `07_insights_y_modelos`.
 
-### `TP3_power_bi_export`
-Genera todos los archivos necesarios para el dashboard de Power BI. Requiere haber ejecutado `TP3_Grupo_1` hasta el final de la sección 6.
+### `08_powerbi_export`
+Genera todos los archivos necesarios para el dashboard de Power BI. Requiere haber ejecutado `07_insights_y_modelos` hasta el final de la sección 6.
+
+
 
 ---
 

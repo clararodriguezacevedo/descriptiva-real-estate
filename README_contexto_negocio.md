@@ -3,7 +3,6 @@
 
 **Analítica Descriptiva**
 
-**Trabajo Práctico N°1 : Primera pre-entrega**
 
 | Grupo N°1 |  |
 | ----- | :---: |
