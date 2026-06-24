@@ -1,17 +1,21 @@
 # Entornos virtuales
+.venv/
 venv/
 env/
 ENV/
 .env
 
-# Python caché
+# Python cache
 __pycache__/
 *.py[cod]
 *$py.class
 
-# Jupyter Notebook
+# Jupyter
 .ipynb_checkpoints
 */.ipynb_checkpoints/*
+
+# Checkpoints intermedios del pipeline (se regeneran corriendo los notebooks)
+data/processed/*.pkl
 
 # Sistema
 .DS_Store
