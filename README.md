@@ -1,185 +1,126 @@
+# Análisis del Mercado Inmobiliario de CABA
 
-**11/06/2026**
+Trabajo práctico de análisis de datos sobre el mercado inmobiliario de la Ciudad Autónoma de Buenos Aires con el objetivo de realizar una recomendación informada hacia un inversor amateur interesado en comprar un departamento en CABA. El proyecto cubre el ciclo completo: scraping de datos, limpieza, análisis exploratorio, geocoding, validación de hipótesis, reducción de dimensionalidad, clustering, modelos predictivos y exportación a un dashboard en Power BI.
 
-**Analítica Descriptiva**
-
-**Trabajo Práctico N°3 : Técnicas Analíticas Avanzadas, Segmentación y Construcción de Insights Estratégicos**
-
-| Grupo N°1 |  |
+| Integrantes |  |
 | ----- | :---: |
 | Clara Rodriguez Acevedo | 66527 |
 | Valentina Contrera | 66577 |
 | Valentina Ludmila Darchuk | 66009 |
 
-# Análisis del Mercado Inmobiliario de CABA
+---
 
-Trabajo práctico de análisis de datos sobre el mercado inmobiliario de la Ciudad Autónoma de Buenos Aires con el objetivo de realizar una recomendación informada hacia un inversor amateur interesado en comprar un departamenteo en CABA. El proyecto cubre el ciclo completo: scraping de datos, limpieza, análisis exploratorio, geocoding, validación de hipótesis, reducción de dimensionalidad, clustering, modelos predictivos y exportación a un dashboard en Power BI.
+## Resumen ejecutivo
+
+Scrapeamos y unificamos ~52.000 avisos de venta, alquiler y alquiler temporario de ArgenProp y ZonaProp en CABA, los limpiamos y enriquecimos con geocoding y variables espaciales (distancia a subte, tren y espacios verdes), y construimos un set de KPIs de rentabilidad por barrio. Sobre esa base validamos cuatro hipótesis, redujimos la dimensionalidad de las variables de la propiedad en tres índices interpretables (Lujo, Confort, Antigüedad), segmentamos el mercado en cuatro micro-mercados con K-Means y entrenamos modelos explicativos de precio por m² y de modalidad de alquiler óptima.
+
+Los hallazgos centrales: **los barrios más caros no son los más rentables** (correlación negativa entre precio/m² y rentabilidad neta), **los amenities premium suben el precio tanto en venta como en alquiler** (el caso más fuerte es el gimnasio, que suma ~52% en venta y ~60% en alquiler), y **la antigüedad y el nivel socioeconómico del barrio son las variables que más explican el precio por m²**. La recomendación final para el inversor principiante es una tabla por barrio con la modalidad de alquiler sugerida, la rentabilidad esperada y el cluster dominante, priorizando barrios de gama media sobre los más caros.
 
 ---
 
-## Estructura del repositorio
+## Contexto
 
-```
-descriptiva-real-estate/
-├── data/
-│   ├── raw/                  # Datos crudos obtenidos por scraping
-│   ├── geocoding/            # GeoJSONs y dataframe con coordenadas por propiedad
-│   └── processed/            # Dataframes limpios, KPIs y archivos listos para análisis
-├── notebooks/
-│   ├── argenprop/            # Scraper de ArgenProp (ver README interno)
-│   ├── zonaprop/             # Scraper de ZonaProp (ver README interno)
-│   ├── 01_dataframe_maestro.ipynb
-│   ├── 02_data_cleaning_and_normalization.ipynb
-│   ├── 03_eda_and_insights.ipynb
-│   ├── 04_kpi_pipeline.ipynb
-│   ├── 05_geocoding.ipynb
-│   ├── 06_hipotesis.ipynb
-│   ├── 07_insights_y_modelos.ipynb
-│   └── 08_powerbi_export.ipynb
-|__dashboard.pbix
-```
+Hoy en día, una de las formas más comunes de invertir es hacerlo en Real Estate. La compra, venta y alquiler de propiedades son operaciones que se realizan constantemente.
+
+Sin embargo, el mercado inmobiliario porteño es confuso: la información de precios de venta, alquileres tradicionales y alquileres temporarios está dispersa en distintos portales, en distintas monedas y con criterios de publicación inconsistentes. El comprador minorista argentino no tiene visibilidad real sobre cuál barrio, qué tipología y qué modalidad de alquiler maximiza su rentabilidad para un departamento y además, opera bajo restricciones muy particulares: muchas veces compra al contado, en dólares, en un contexto donde la regulación de alquileres cambia cada dos años y donde el precio del metro cuadrado puede multiplicarse por cuatro entre dos barrios separados por seis kilómetros. Estas condiciones tienen una consecuencia directa: la primera compra es prácticamente irreversible. No hay refinanciación posible, y los costos de transacción de revender son altos. Por eso la decisión inicial define el rendimiento de la próxima década del patrimonio del inversor.
+
+Entonces, para un inversionista nuevo en el mercado del Real Estate, comenzar puede ser intimidante sin suficiente conocimiento o experiencia previa. Por eso mismo, decidimos realizar un análisis que responda la siguiente pregunta: ¿Qué departamento conviene comprar para obtener el retorno de inversión más rápido según un barrio determinado? Asimismo, también queremos responder: ¿Qué tipo de alquiler es más conveniente? ¿Un alquiler temporario o un alquiler a largo plazo?
+
+### Perfil del Cliente (Interlocutor)
+
+**Inversor Independiente Principiante**
+
+Nuestro cliente objetivo es una persona física que busca su primera inversión en un departamento en la Ciudad de Buenos Aires. Su duda central no es solo dónde comprar, sino también cómo alquilar: bajo la modalidad tradicional (contrato fijo con un inquilino) o bajo la modalidad temporal. Necesita evidencia cuantitativa para tomar una decisión estratégica antes de comprometer capital. Este perfil no incluye a personas especialistas en el mercado, personas con amplia experiencia previa o expertos en Real Estate.
 
 ---
 
-## Scraping
+## Dataset final y origen
 
-Los datos provienen de dos portales inmobiliarios argentinos: **ArgenProp** y **ZonaProp**. Cada uno tiene su propio scraper y README con instrucciones de uso en las carpetas `notebooks/argenprop/` y `notebooks/zonaprop/` respectivamente. Los archivos resultantes del scraping se guardan en `data/raw/`.
+Los datos provienen de dos portales inmobiliarios argentinos, **ArgenProp** y **ZonaProp**, con una extracción única de avisos de venta, alquiler y alquiler temporario en CABA. El dataset maestro original combina ambos scrapers en un dataframe con una fila por aviso (ver columnas en la sección de pipeline más abajo).
 
----
+Después del proceso de limpieza (deduplicación, corrección de errores de moneda, tratamiento de outliers y de valores faltantes), el **dataset final queda en 51.996 registros**, distribuidos en los tres tipos de operación (venta, alquiler y alquiler temporario) y en ambas monedas (ARS y USD). Alquiler temporario es la operación con menor volumen pero igual reúne más de 8.000 filas, suficientes para sacar conclusiones sólidas en los tres tipos de operación. Palermo, Belgrano, Recoleta y Caballito son los barrios con mayor representación en el dataset, lo que coincide con su popularidad actual.
 
-## Pipeline de notebooks
-
-### `01_dataframe_maestro`
-Une los TSVs producidos por ambos scrapers y construye el dataframe maestro unificado.
-
-### `02_data_cleaning_and_normalization`
-Limpieza integral de datos: eliminación de duplicados, tratamiento de outliers y gestión de valores faltantes a partir de las monedas utilizadas (ARS y USD) y las operaciones (venta, alquiler temporario, alquiler largo plazo). 
-
-### `03_eda_and_insights`
-Análisis exploratorio de los datos. Incluye análisis geográfico de precios, distribución por barrio, tipo de operación y características de las propiedades.
-
-### `04_kpi_pipeline`
-Cálculo de KPIs (detallados en README_TP1) y exportación a un dataframe consolidado.
-
-### `05_geocoding`
-Resolución de coordenadas geográficas (latitud y longitud) a partir de calles y alturas de cada propiedad, usando dos APIs oficiales argentinas. El consenso entre ambas fuentes se guarda en `data/geocoding/`.
+Sobre ese dataset limpio se calculan los 9 KPIs por barrio (rentabilidad bruta y neta, recupero de inversión, precio/m² relativo, índices de modalidad óptima (ver tabla completa en la sección de pipeline)), se resuelven coordenadas geográficas (con aproximadamente 1 de cada 7 avisos sin coordenadas resueltas, generalmente por falta de calle/altura), y se agregan variables espaciales y socioeconómicas para el resto del análisis.
 
 ---
 
-## Entrega 3 — Notebook principal: `07_insights_y_modelos`
+## Decisiones de preprocesamiento
 
-Este es el notebook central de la tercera entrega. Integra todos los análisis avanzados del proyecto.
+La limpieza fue uno de los componentes más pesados del proyecto, dado lo heterogéneo de los datos scrapeados. Las decisiones más relevantes:
 
-### 1. Setup e importación de datos
-Carga del dataset enriquecido con coordenadas. Normalización de nombres de barrios para alinear con el GeoJSON oficial. Se descarta un subconjunto muy pequeño de ventas publicadas en pesos por inconsistencias de precio. Se agrega una columna con todos los precios convertidos a dólares, usando un tipo de cambio cacheado localmente para garantizar reproducibilidad entre corridas.
-
-### 2. Enriquecimiento espacial
-Para cada propiedad con coordenadas resueltas se calculan tres distancias geográficas mediante aproximación euclidiana corregida por latitud, válida para distancias cortas dentro de la ciudad:
-
-- **Distancia al subte más cercano**: descargada desde datos abiertos del GCBA. Sirve como proxy de accesibilidad al transporte público.
-- **Distancia al espacio verde más cercano**: proxy de calidad ambiental.
-- **Distancia a la estación de tren más cercana**: captura accesibilidad en barrios con menor cobertura de subte.
-
-Adicionalmente, se asigna a cada propiedad el **nivel socioeconómico de su barrio** (escala ordinal del 1 al 5) basado en clasificaciones del GCBA y datos del censo.
-
-Se incluye una revisión de la cobertura del geocoding por barrio, dejando documentado el sesgo potencial en zonas con menos coordenadas resueltas (Puerto Madero es el de menor cobertura con un 68%).
-
-Se generan mapas coropléticos con la distribución del precio por metro cuadrado y la distancia al subte por barrio. Al final de esta sección se guarda un checkpoint (`checkpoint_post_enriquecimiento.pkl`) que permite ejecutar los notebooks de hipótesis y exportación de forma independiente.
-
-### 3. Validación de hipótesis
-Las cuatro hipótesis del trabajo se validan en el notebook `06_hipotesis.ipynb` (ver más abajo), que carga el checkpoint generado en la sección anterior.
-
-### 4. Reducción de dimensionalidad e índices sintéticos
-Para reducir multicolinealidad y facilitar la interpretación de los modelos, se construyen tres índices:
-
-**PCA sobre variables continuas** (precio/m², superficie, antigüedad): se retienen dos componentes que explican aproximadamente el 80% de la varianza.
-- *PC1 — Índice de precio y superficie*: sube con propiedades grandes y caras por metro cuadrado. Perfil de gama media-alta.
-- *PC2 — Score de Antigüedad*: sube con propiedades viejas y relativamente baratas. Se normaliza al rango [0, 1] como feature explícita para los modelos.
-
-**MCA sobre amenities binarios**: equivalente del PCA para variables categóricas, aplicado sobre 26 amenities binarios. El primer componente se interpreta como **Índice de Lujo** (captura amenities premium: pileta, gimnasio, SUM, etc.).
-
-**Índice de Confort**: construido de forma explícita como la proporción de seis amenities de comodidad cotidiana presentes en la propiedad (aire acondicionado, ascensor, agua caliente central, lavadero, portero, losa central). Complementa al Índice de Lujo capturando una dimensión distinta del valor.
-
-Los tres índices se validan contra el precio por metro cuadrado en ventas: Lujo y Confort muestran correlaciones positivas significativas; el Score de Antigüedad muestra correlación negativa, consistente con su construcción.
-
-### 5. Clustering para descubrir micro-mercados
-Se aplica K-Means sobre un conjunto de variables que cubre tres dimensiones: características de la propiedad (precio/m², superficie, antigüedad) y entorno espacial (distancias al subte, espacios verdes y tren, nivel socioeconómico del barrio).
-
-La cantidad de clusters se selecciona con tres métricas complementarias: método del codo, score de silueta e índice de Calinski-Harabasz. Se elige **k=4** como punto de quiebre más claro del codo, con una diferencia marginal respecto a k=5 en las otras métricas que no justifica la pérdida de interpretabilidad.
-
-A cada cluster se le asigna un nombre comercial descriptivo generado dinámicamente a partir de sus medianas (por ejemplo: "departamentos compactos, antiguos, lejos del subte"). Estos nombres se usan luego como variable en los modelos y en el dashboard.
-
-Se incluye también una corrida de **DBSCAN** como sanity check: identifica outliers que K-Means asigna a algún cluster por diseño, y confirma que K-Means es la opción correcta para la segmentación principal de negocio. 
-
-Los resultados se visualizan con: heatmap de perfiles por cluster, scatter sobre el espacio del PCA, mapa coroplético del cluster dominante por barrio, mapa de rentabilidad neta a largo plazo, y scatter a nivel propiedad sobre el polígono de CABA.
-
-### 6. Modelos explicativos
-Se construyen dos modelos con distinto target:
-
-**Precio por metro cuadrado (target continuo)**: se comparan tres modelos lineales — OLS, Ridge (L2) y Lasso (L1) — evaluados por R² y MAE en test y con validación cruzada de 5 folds. Se complementan con un árbol de decisión de profundidad 4 para generar reglas interpretables. El análisis incluye comparación de coeficientes estandarizados entre los tres modelos, permutation importance (caída de R² al aleatorizar cada variable) y curvas de sensibilidad por variable (variando cada feature entre sus percentiles 5 y 95, con el resto fijo en la mediana).
-
-**Modalidad de alquiler (target binario)**: la variable objetivo es si el alquiler temporario rinde más que el largo plazo en el barrio de la propiedad. Se comparan regresión logística y árbol de clasificación. Se reportan matriz de confusión, classification report, AUC-ROC y odds ratios estandarizados.
-
-La sección cierra con una **tabla de recomendación por barrio** con la modalidad sugerida, la rentabilidad esperada y el cluster dominante, orientada al inversor principiante.
-
-### 7. Conclusiones, limitaciones y próximos pasos
-
-Principales hallazgos:
-- La cercanía al subte incide positivamente en el precio por metro cuadrado.
-- Los barrios con mayor precio/m² no son los más rentables: hay correlación negativa entre precio y rentabilidad neta a largo plazo, lo que orienta al inversor hacia gama media.
-- Los amenities tienen mayor peso en el precio de venta que en el de alquiler.
-- Los tres índices sintéticos (Lujo, Confort, Antigüedad) capturan dimensiones distintas del valor de una propiedad y resultan relevantes en los modelos.
-- El clustering identifica micro-mercados con perfiles de rentabilidad diferenciados.
-
-Limitaciones documentadas: base de un solo período de scraping (sin análisis temporal), muestra pequeña de barrios turísticos para algunas hipótesis, nivel socioeconómico asignado a nivel barrio y no por radio censal, y dependencia del tipo de cambio del día de ejecución para las comparaciones absolutas en dólares.
-
-### 8. Exportación para Power BI
-La exportación de archivos vive en `08_powerbi_export.ipynb`, que carga el checkpoint del final de la sección 6 y produce los siguientes archivos para el dashboard:
-
-- `fact_propiedades.csv` — una fila por propiedad
-- `dim_barrios.csv` — una fila por barrio
-- `dim_clusters.csv` — perfil de cada cluster con nombre y color
-- `dim_puntos_referencia.csv` — estaciones de subte, tren y espacios verdes para overlay del mapa
-- `dim_coeficientes_modelo.csv` — coeficientes Ridge e importancia por permutación
-- `barrios.geojson` — polígonos de barrios para Shape Map
-
-El dashboard mismo se encuentra en `dashboard.pbix`
+- **Moneda y valores ficticios**: los precios marcados como "USD" se tomaron en dólares, el resto en pesos, y los marcados "Consultar" como NaN. Se detectaron valores simbólicos típicos de portales inmobiliarios (precios de "1 peso" o "111.111.111" para indicar "a consultar") y se trataron como faltantes en vez de precios reales.
+- **Corrección de errores de clasificación de moneda**: se identificaron y reclasificaron registros donde el precio estaba en una moneda distinta a la indicada (ej. un alquiler de menos de $300.000 ARS es imposible en CABA en 2026 y casi seguro está en dólares). En total se reclasificaron 104 registros de ARS a USD y 153 de USD a ARS.
+- **Outliers en precio**: se usó `precio_por_m2` como métrica central (en vez de precio absoluto) para no confundir tamaño con sobreprecio. Se aplicó winsorización por percentiles 1-99, adaptativa por segmento (operación + moneda + barrio, con fallback a operación + moneda cuando el barrio tenía menos de 30 registros), para no tratar como atípicas propiedades normales en barrios con rangos de precio muy distintos (ej. Puerto Madero vs. Villa Lugano).
+- **Transformación logarítmica**: se aplicó `log1p` sobre los precios para estabilizar la varianza, dado que los precios inmobiliarios siguen una distribución log-normal.
+- **Expensas**: se determinó un umbral de $2.000-3.000 ARS por debajo del cual un valor se considera "sin expensas reales" (ingresado como placeholder), usando un análisis de codo sobre la distribución ordenada de valores.
+- **Valores faltantes**: se confirmó con un test chi-cuadrado que la ausencia de ciertos campos (ambientes, baños, antigüedad) depende del sitio de origen: por ejemplo, "ambientes" está prácticamente completo en ZonaProp (0,8% de faltantes) y casi vacío en ArgenProp (96,8%), y a la inversa para "antigüedad_años". Esto encuadra el patrón como faltante condicionado al sitio (MAR) y justificó una imputación diferenciada por sitio, cruzando datos entre ambos portales según m² cuando fue posible. Las columnas con cobertura insuficiente para ser confiables se descartaron.
+- **Deduplicación**: se usó `posting_id` + `sitio` como clave (no barrio/precio/m², que pueden coincidir en propiedades distintas), eliminando 3.243 filas duplicadas.
 
 ---
 
-## Entrega 3 — Notebooks complementarios
+## Principales insights del análisis exploratorio
 
-### `06_hipotesis`
-Valida las cuatro hipótesis planteadas en la introducción del trabajo:
-1. Rentabilidad temporaria vs. largo plazo en barrios turísticos.
-2. Mayor precio por metro cuadrado no implica mayor rentabilidad.
-3. Los amenities aumentan el precio de venta pero no el de alquiler.
-4. La cercanía al subte impacta en el precio por metro cuadrado.
-
-Carga el checkpoint `checkpoint_post_enriquecimiento.pkl` y puede ejecutarse de forma independiente una vez corrida la sección 2 de `07_insights_y_modelos`.
-
-### `08_powerbi_export`
-Genera todos los archivos necesarios para el dashboard de Power BI. Requiere haber ejecutado `07_insights_y_modelos` hasta el final de la sección 6.
-
-
+- El inmueble mediano tiene ~52 m², 2 ambientes, 1 dormitorio, 1 baño y 25 años de antigüedad; la media de superficie (~70 m²) es notablemente mayor a la mediana, señal de un segmento de propiedades grandes que empuja el promedio hacia arriba.
+- Existe una relación aproximadamente lineal entre precio y superficie en propiedades de hasta 100 m²; por encima de ese umbral el precio responde más a lujo y ubicación que a los metros cuadrados en sí.
+- El precio/m² se mantiene relativamente estable entre 1 y 3 ambientes, pero los departamentos de 4-5 ambientes alcanzan valores de precio/m² considerablemente más altos.
+- Los departamentos con amenities (especialmente pileta y gimnasio) muestran precios sistemáticamente más altos que los que no tienen.
+- A nivel geográfico, Puerto Madero se destaca como un mercado de lujo aparte, con precios muy por encima del resto; le siguen Recoleta, Palermo, Belgrano y Núñez (este último con una popularidad creciente, asociada a nuevos desarrollos en la zona). El mercado muestra una fuerte heterogeneidad territorial tanto en precio absoluto como en precio por m², lo que respalda analizar el negocio por micro-zonas y no solo por barrio.
 
 ---
 
-## Dependencias
+## Hipótesis y resultados estadísticos
 
-```
-pandas, numpy, matplotlib, seaborn, geopandas, scikit-learn, prince, scipy, requests, geopy
-```
+Se trabajó con un nivel de significancia del 5%.
 
-Instalación rápida:
+| # | Hipótesis | Test | Resultado |
+|---|---|---|---|
+| 1 | En barrios turísticos (Palermo, San Telmo, Recoleta, La Boca), el alquiler temporario rinde más que el largo plazo | Mann-Whitney | **No rechazada.** No hay evidencia suficiente: la mediana de rentabilidad neta a largo plazo en esos barrios (6%) fue incluso mayor que la temporaria (4%). La muestra de solo 4 barrios turísticos limita la potencia del test. |
+| 2 | Los barrios con mayor precio/m² no son los de mayor rentabilidad neta | Spearman + Mann-Whitney (top 10 más caros vs. resto) | **Confirmada.** Correlación de Spearman de -0,806 (p < 0,0001) entre precio/m² y rentabilidad neta; los 10 barrios más caros rinden significativamente menos que el resto. |
+| 3 | Los amenities suben el precio de venta pero no el de alquiler | Mann-Whitney por amenity y tipo de operación | **Rechazada en su forma original.** Los amenities (pileta, gimnasio, parrilla, SUM, balcón, baulera) resultaron estadísticamente significativos en las tres modalidades, no solo en venta. El caso más marcado es el gimnasio: +52% en precio de venta y +60% en alquiler (la modalidad de alquiler capturó incluso más premium que la venta). |
+| 4 | La cercanía al subte aumenta el precio por m² | Spearman (n=24.974 propiedades con coordenadas) | **Rechazada en el sentido esperado.** Hay correlación significativa (Spearman = 0,137, p < 0,0001) pero de signo positivo: a mayor distancia al subte, mayor precio por m², lo opuesto a la intuición. Esto puede reflejar que las zonas premium de CABA (Puerto Madero, Recoleta) no son necesariamente las de mejor cobertura de subte, por lo que el efecto socioeconómico/de ubicación domina sobre el efecto puro de accesibilidad.
 
-```bash
-pip install scikit-learn prince geopandas scipy matplotlib seaborn geopy
-```
+---
 
+## Conclusiones y recomendaciones de negocio
+
+Para el inversor principiante, la evidencia recolectada sugiere:
+
+1. **No comprar en los barrios más caros buscando rentabilidad.** El precio por m² más alto (Puerto Madero, Recoleta, Palermo, Belgrano) no se traduce en mejor retorno; de hecho la correlación con la rentabilidad neta es negativa. Conviene mirar barrios de gama media.
+2. **Los amenities premium (pileta, gimnasio) son una inversión defendible**, ya que su efecto sobre el precio se traslada también al alquiler; no es solo un costo de venta que no se recupera.
+3. **La modalidad de alquiler óptima depende del barrio y del perfil de la propiedad**, no hay una respuesta universal. La distancia al subte es un factor relevante específicamente para decidir si conviene apuntar a alquiler temporario.
+4. La hipótesis de que los barrios turísticos rinden mejor en alquiler temporario **no se pudo confirmar con la evidencia disponible**; en la muestra analizada, el largo plazo rindió incluso mejor en esos barrios.
+5. El dashboard de Power BI permite explorar estas conclusiones de forma interactiva, filtrando por barrio, cluster y tipo de operación.
+
+---
+
+## Limitaciones del estudio y líneas futuras
+
+- **Sin componente temporal**: toda la base proviene de un único período de scraping, por lo que no es posible validar tendencias ni evaluar la estabilidad de los segmentos a lo largo del tiempo. Una línea futura natural es repetir el scraping periódicamente para construir una serie temporal.
+- **Tipo de cambio cacheado**: la conversión ARS→USD depende del día en que se ejecutó el notebook. Las conclusiones relativas (qué barrio rinde más que otro) son estables, pero las cifras absolutas en dólares pueden variar entre corridas.
+- **Muestra chica para la Hipótesis 1**: solo cuatro barrios se clasificaron como turísticos, lo que reduce la potencia del test de Mann-Whitney; es posible que exista una diferencia real que el test no pudo detectar con tan pocos casos.
+- **Nivel socioeconómico aproximado**: se asignó por barrio a partir de clasificaciones publicadas y conocimiento general de la ciudad, no a partir de un dato fino por radio censal. Se podría refinar con datos oficiales del INDEC/GCBA a nivel comuna.
+- **Cobertura de geocoding desigual**: aproximadamente 1 de cada 7 avisos no tiene coordenadas resueltas, y la cobertura varía por barrio (Puerto Madero es el caso más bajo, con 68%), lo que introduce un sesgo potencial en los análisis espaciales para esos barrios.
+- **Clustering hecho sobre ventas en dólares**: los micro-mercados descubiertos no son directamente extrapolables al mercado de alquileres, que podría tener su propia segmentación.
+- **Modelo de modalidad de alquiler con target a nivel barrio**: el AUC alto del modelo de modalidad óptima debe leerse con cautela, ya que el target se construyó a nivel barrio y luego se asignó a cada propiedad individual, por lo que el modelo puede estar capturando principalmente el efecto del barrio y no diferencias entre propiedades específicas. Además, la clase "temporario" es minoritaria, lo que puede dar una imagen de desempeño más optimista de la real.
+
+---
+ 
+## De prototipo a producción
+ 
+Hoy el proyecto es una secuencia de notebooks que se corren a mano sobre un scraping puntual. Es importante notar que este caso es de **inferencia Batch (offline)**, no una API en tiempo real: no hay un usuario esperando una predicción puntual, sino un proceso programado (ej. semanal) que recalcula KPIs, clusters y modelos sobre todo el universo de propiedades. Esto simplifica el despliegue frente a, por ejemplo, un caso de scoring de fraude con latencia crítica.
+ 
+Entonces, llevarlo a producción implicaría:
+ 
+- **Empaquetado**: serializar los modelos (Ridge/Lasso, regresión logística, K-Means) con `joblib` (más adecuado que Pickle u ONNX para este tipo de modelos de scikit-learn) y unificar la limpieza, el enriquecimiento espacial y los índices sintéticos en un único objeto `Pipeline`, para que cada corrida nueva de scraping pase por exactamente los mismos pasos que los datos de entrenamiento.
+- **Validación de inputs**: hoy gran parte de la limpieza consiste en detectar a posteriori errores ya cargados en los datos (precios "a consultar" como "1 peso", monedas mal clasificadas). En producción convendría validar cada aviso contra un esquema (ej. Pydantic) en el momento del scraping, antes de que entre al pipeline.
+- **Monitoreo de Data Drift**: test de Kolmogorov-Smirnov para variables numéricas (precio/m², superficie) y test Chi-cuadrado para categóricas (mix de barrios, proporción ARS/USD), comparando cada corrida nueva contra la anterior, más alertas simples ante categorías nunca vistas (barrios o segmentos nuevos).
+- **Concept Drift**: la relación entre variables y precio también puede cambiar con el tiempo (ej. la relación entre distancia al subte y precio/m², que en este análisis salió positiva y contraria a la intuición, podría invertirse si cambia la regulación de alquileres o el contexto cambiario), lo que justifica re-validar las hipótesis periódicamente en vez de asumirlas permanentes.
+- **Reentrenamiento y dashboard**: reentrenar modelos y clustering en una cadencia más espaciada que el scraping (ej. mensual), versionando los artefactos para poder hacer rollback, y publicar el `.pbix` en Power BI Service con un dataflow conectado a un storage compartido y actualización programada, en vez de exportar y subir el archivo a mano.
+
+El desarrollo completo de esta reflexión está en la sección 7.4 de `08_modelos_y_recomendaciones.ipynb`.
+ 
 ---
 
 ## Reproducibilidad
 
 Todos los modelos y el clustering usan `SEED = 42` como semilla global, fijada tanto en `numpy.random` como en `random` y en el parámetro `random_state` de cada modelo de scikit-learn. El tipo de cambio se cachea localmente en `data/processed/tipo_cambio_cache.json` para que las conversiones a dólares sean consistentes entre corridas.
-
