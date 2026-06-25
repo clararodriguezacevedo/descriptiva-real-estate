@@ -67,11 +67,9 @@ Con un presupuesto típico de USD 120.000 y la configuración recomendada (dos a
 
 ### Herramienta de tasación (modelo de precio/m²)
 
-Como complemento al ranking, entrenamos un modelo `HistGradientBoosting` sobre las ~25.000 propiedades en venta para predecir el precio del m² esperado. Se aplica a cualquier propiedad nueva pasándole cuatro datos visibles en la publicación (superficie, antigüedad, amenities, dirección) y devuelve el precio que el mercado debería estar pidiendo para una propiedad con ese perfil.
+Como complemento al ranking, entrenamos un modelo de regresión sobre las ~25.000 propiedades en venta para predecir el precio del m² esperado. Se aplica a cualquier propiedad nueva pasándole cuatro datos visibles en la publicación (superficie, antigüedad, amenities, dirección) y devuelve el precio que el mercado debería estar pidiendo para una propiedad con ese perfil.
 
 La aplicación es directa: si una propiedad se publica a USD 3.500/m² y el modelo estima USD 2.700, el inversor sabe que está negociando contra un sobreprecio cercano al 30%. Para justificarlo, el departamento tiene que ser extraordinario en algún atributo que el modelo no captura (muy buena vista, terraza enorme, grifería de oro). Si no aparece ese atributo extraordinario, hay margen real de negociación.
-
-El MAE del modelo es de ~USD 400/m² (aproximadamente 20% sobre la mediana): es útil para detectar sobreprecios claros, no para tasar al dólar fino.
 
 ---
 
@@ -150,9 +148,10 @@ descriptiva-real-estate/
 │   ├── 03_eda_and_insights.ipynb
 │   ├── 04_kpi_pipeline.ipynb
 │   ├── 05_geocoding.ipynb
-│   ├── 06_hipotesis.ipynb
-│   ├── 07_insights_y_modelos.ipynb
-│   └── 08_powerbi_export.ipynb
+│   ├── 06_reduccion_y_clustering.ipynb
+│   ├── 07_hipotesis.ipynb
+│   ├── 08_modelos_y_recomendacion.ipynb
+│   └── 09_powerbi_export.ipynb
 ├── scripts/
 │   └── geocode_addresses.py                        # Geocoder reanudable (USIG + Georeferencia Nación)
 └── dashboard/
@@ -248,14 +247,7 @@ ZonaProp analiza la "firma TLS" de cada conexión entrante. La librería `reques
 
 ### Manejo de CAPTCHA en ArgenProp
 
-ArgenProp presenta un CAPTCHA aproximadamente cada 100 páginas (no es rate-limit, sino estrictamente por número de página). Cuando ocurre, el scraper:
-
-1. **Guarda el progreso parcial** en un TSV antes de detenerse.
-2. **Muestra instrucciones** para resolver el CAPTCHA en el navegador.
-3. **Solicita las cookies** del navegador para recuperar la sesión.
-4. **Reintenta automáticamente** con las cookies provistas.
-
-Si no se puede recuperar la sesión, el scraper indica desde qué página reanudar:
+ArgenProp presenta un CAPTCHA aproximadamente cada 100 páginas (no es rate-limit, sino estrictamente por número de página). Cuando ocurre, el scraper guarda el progreso parcial en un TSV antes de detenerse, muestra instrucciones para resolver el CAPTCHA en el navegador, solicita las cookies del navegador para recuperar la sesión y reintenta automáticamente con las cookies provistas. Si no se puede recuperar la sesión, el scraper indica desde qué página reanudar:
 
 ```python
 df1 = pd.read_csv("output/argenprop_venta_PARCIAL_XXXXXXXXXX.tsv", sep='\t')
@@ -291,10 +283,10 @@ Une los TSVs producidos por ambos scrapers y construye el dataframe maestro unif
 Limpieza integral de datos: eliminación de duplicados, tratamiento de outliers y gestión de valores faltantes a partir de las monedas utilizadas (ARS y USD) y las operaciones (venta, alquiler temporario, alquiler largo plazo). El dataset final queda en 51.996 registros (ver detalle en "Decisiones de preprocesamiento" más arriba).
 
 ### `03_eda_and_insights`
-Análisis exploratorio de los datos. Incluye análisis geográfico de precios, distribución por barrio, tipo de operación y características de las propiedades (ver "Principales insights del análisis exploratorio" más arriba).
+Análisis exploratorio: análisis geográfico de precios, distribución por barrio, tipo de operación y características de las propiedades (ver "Principales insights del análisis exploratorio" más arriba).
 
 ### `04_kpi_pipeline`
-Cálculo de los siguientes KPIs y exportación a un dataframe consolidado, todos calculados por barrio con precios normalizados a USD:
+Cálculo de los siguientes KPIs por barrio, con precios normalizados a USD, y exportación a un dataframe consolidado:
 
 | # | KPI | Fórmula | Propósito |
 | :---- | :---- | :---- | :---- |
@@ -311,43 +303,33 @@ Cálculo de los siguientes KPIs y exportación a un dataframe consolidado, todos
 ### `05_geocoding`
 Resolución de coordenadas geográficas (latitud y longitud) a partir de calles y alturas de cada propiedad, usando dos APIs oficiales argentinas (USIG-GCBA y Georeferencia Nación). El consenso entre ambas fuentes se guarda en `data/geocoding/`. El script reanudable que realiza el llamado masivo a las APIs vive en `scripts/geocode_addresses.py`; el notebook documenta el resultado y audita la cobertura.
 
-### `06_hipotesis`
-Valida las cuatro hipótesis del proyecto (ver tabla completa en "Hipótesis y resultados estadísticos" más arriba). Carga el checkpoint `checkpoint_post_enriquecimiento.pkl` y puede ejecutarse de forma independiente una vez corrida la sección 2 de `07_insights_y_modelos`.
+### `06_reduccion_y_clustering`
+Carga el dataset enriquecido con coordenadas y construye los índices sintéticos del proyecto, más el clustering de micro-mercados.
 
-### `07_insights_y_modelos`
-Notebook central de la entrega 3. Integra todos los análisis avanzados del proyecto.
+**Enriquecimiento espacial.** Para cada propiedad con coordenadas resueltas se calculan tres distancias geográficas mediante aproximación euclidiana corregida por latitud: distancia al subte más cercano (proxy de accesibilidad), al espacio verde más cercano (proxy ambiental) y a la estación de tren más cercana (accesibilidad en zonas con menor cobertura de subte). Se asigna a cada propiedad el nivel socioeconómico de su barrio (escala ordinal del 1 al 5) basado en clasificaciones del GCBA y datos del censo. Se documenta la cobertura del geocoding por barrio (Puerto Madero es el de menor cobertura con un 68%).
 
-**1. Setup e importación de datos.** Carga del dataset enriquecido con coordenadas. Normalización de nombres de barrios para alinear con el GeoJSON oficial. Se descarta un subconjunto muy pequeño de ventas publicadas en pesos por inconsistencias de precio. Se agrega una columna con todos los precios convertidos a dólares, usando un tipo de cambio cacheado localmente.
-
-**2. Enriquecimiento espacial.** Para cada propiedad con coordenadas resueltas se calculan tres distancias geográficas mediante aproximación euclidiana corregida por latitud: distancia al subte más cercano (proxy de accesibilidad), distancia al espacio verde más cercano (proxy de calidad ambiental) y distancia a la estación de tren más cercana (accesibilidad en zonas con menor cobertura de subte). Adicionalmente, se asigna a cada propiedad el nivel socioeconómico de su barrio (escala ordinal del 1 al 5) basado en clasificaciones del GCBA y datos del censo. Se documenta la cobertura del geocoding por barrio (Puerto Madero es el de menor cobertura con un 68%). Al cierre se guarda el checkpoint `checkpoint_post_enriquecimiento.pkl`.
-
-**3. Reducción de dimensionalidad e índices sintéticos.** Para reducir multicolinealidad y facilitar la interpretación de los modelos se construyen tres índices:
-- **PCA sobre variables continuas** (precio/m², superficie, antigüedad): se retienen dos componentes que explican ~80% de la varianza. PC1 es el *Índice de precio y superficie* (sube con propiedades grandes y caras); PC2 es el *Score de Antigüedad* (sube con propiedades viejas y baratas, normalizado a [0, 1]).
+**Reducción de dimensionalidad e índices sintéticos.** Para reducir multicolinealidad y facilitar la interpretación de los modelos se construyen tres índices:
+- **PCA sobre variables continuas** (precio/m², superficie, antigüedad): se retienen dos componentes que explican ~80% de la varianza. PC1 es el *Índice de precio y superficie*; PC2 es el *Score de Antigüedad*, normalizado a [0, 1].
 - **MCA sobre amenities binarios**: el primer componente explica un 13,43% de la varianza por sí solo y se interpreta como **Índice de Lujo** (captura amenities premium: pileta, gimnasio, SUM, etc.).
 - **Índice de Confort**: construido como la proporción de seis amenities de comodidad cotidiana presentes en la propiedad (aire acondicionado, ascensor, agua caliente central, lavadero, portero, losa central).
 
-Los tres índices se validan contra el precio por m² en ventas: Lujo tiene correlación positiva considerable, Confort positiva más leve, y el Score de Antigüedad correlación negativa marcada.
+**Clustering para descubrir micro-mercados.** K-Means sobre características de la propiedad (precio/m², superficie, antigüedad) y entorno espacial (distancias al subte, espacios verdes y tren, nivel socioeconómico). La cantidad de clusters se selecciona con tres métricas (método del codo, silueta, Calinski-Harabasz). Se elige **k=4** como punto de quiebre más claro del codo. A cada cluster se le asigna un nombre comercial descriptivo generado a partir de sus medianas. Se incluye un DBSCAN como sanity check.
 
-**4. Clustering para descubrir micro-mercados.** K-Means sobre características de la propiedad (precio/m², superficie, antigüedad) y entorno espacial (distancias al subte, espacios verdes y tren, nivel socioeconómico). La cantidad de clusters se selecciona con tres métricas (método del codo, silueta, Calinski-Harabasz). Se elige **k=4** como punto de quiebre más claro del codo. A cada cluster se le asigna un nombre comercial descriptivo generado a partir de sus medianas (ej: "departamentos compactos, antiguos, lejos del subte"). Se incluye un DBSCAN como sanity check: no devolvió más de un cluster significativo, confirmando a K-Means como la opción adecuada.
+Cierra con mapas y heatmaps de perfil por cluster, y guarda un checkpoint (`checkpoint_post_clustering.pkl`) con el dataframe enriquecido y los objetos auxiliares (KPIs, capas geográficas, perfiles) para que los notebooks `07_hipotesis` y `08_modelos_y_recomendacion` puedan ejecutarse de forma independiente.
 
-**5. Modelos explicativos.** Dos modelos con distinto target:
+### `07_hipotesis`
+Valida las cuatro hipótesis del proyecto (ver tabla completa en "Hipótesis y resultados estadísticos" más arriba). Carga el checkpoint `checkpoint_post_clustering.pkl` y puede ejecutarse de forma independiente una vez corrido `06_reduccion_y_clustering`.
 
-- *Precio por metro cuadrado (continuo)*: se comparan OLS, Ridge (L2) y Lasso (L1), evaluados por R² y MAE en test y con CV de 5 folds. Los tres modelos resultan prácticamente equivalentes. Variables con mayor impacto (coeficientes estandarizados): antigüedad en años (relación negativa fuerte), nivel socioeconómico del barrio, m² totales, Índice de Lujo y cantidad de baños. Confirmado por árbol de decisión de profundidad 4, permutation importance y curvas de sensibilidad. Importante: se usa la antigüedad cruda en años, no el `score_antiguedad` derivado del PCA, porque ese score se calcula sobre una matriz que incluye precio/m² como input y meterlo en el modelo sería leak del target.
-- *Modalidad de alquiler (binario)*: target = si el temporario rinde más que el LP en el barrio. Se comparan regresión logística y árbol. AUC ~0.99 y ~0.97 respectivamente, **a interpretarse con cautela**: el target fue construido a nivel barrio, así que el modelo captura mayormente patrones del barrio, no de propiedades individuales. La variable más relevante es la distancia al subte (consistente con que inquilinos temporarios suelen priorizar conectividad).
+### `08_modelos_y_recomendacion`
+Carga el mismo checkpoint para construir dos modelos explicativos sobre el dataset enriquecido.
 
-La sección cierra con una tabla de recomendación por barrio con la modalidad sugerida, la rentabilidad esperada y el cluster dominante.
+- *Precio por metro cuadrado (continuo)*: se comparan OLS, Ridge (L2) y Lasso (L1), evaluados por R² y MAE en test y con CV de 5 folds. Los tres modelos resultan prácticamente equivalentes. Variables con mayor impacto (coeficientes estandarizados): antigüedad en años (relación negativa fuerte), nivel socioeconómico del barrio, m² totales, Índice de Lujo y cantidad de baños. Confirmado por árbol de decisión de profundidad 4, permutation importance y curvas de sensibilidad. Importante: se usa la antigüedad cruda en años, **no** el `score_antiguedad` derivado del PCA, porque ese score se calcula sobre una matriz que incluye precio/m² como input y meterlo en el modelo sería leak del target.
+- *Modalidad de alquiler (binario)*: target = si el temporario rinde más que el LP en el barrio. Se comparan regresión logística y árbol. AUC ~0.99 y ~0.97 respectivamente, **a interpretarse con cautela**: el target fue construido a nivel barrio, así que el modelo captura mayormente patrones del barrio, no de propiedades individuales. La variable más relevante es la distancia al subte.
 
-**6. Conclusiones.** Principales hallazgos:
-- La cercanía al subte tiene relación estadísticamente significativa con el precio/m², aunque de signo contrario al esperado (positiva).
-- Los barrios con mayor precio/m² no son los más rentables: correlación negativa entre precio y rentabilidad neta.
-- Los amenities tienen mayor peso en venta que en alquiler, pero también suben el alquiler de forma significativa.
-- Los tres índices sintéticos (Lujo, Confort, Antigüedad) capturan dimensiones distintas del valor.
-- El clustering identifica micro-mercados con perfiles de rentabilidad diferenciados.
+La sección cierra con una **tabla de recomendación por barrio** con la modalidad sugerida, la rentabilidad esperada y el cluster dominante, y guarda el checkpoint final (`checkpoint_post_modelos.pkl`) para el siguiente notebook.
 
-La sección 7.4 incluye la reflexión completa sobre llevar el proyecto a producción.
-
-### `08_powerbi_export`
-Genera todos los archivos necesarios para el dashboard de Power BI. Requiere `07_insights_y_modelos` ejecutado hasta el final de la sección 6, ya que carga su checkpoint y produce:
+### `09_powerbi_export`
+Genera todos los archivos necesarios para el dashboard de Power BI. Requiere `08_modelos_y_recomendacion` ejecutado hasta el final, ya que carga su checkpoint y produce:
 
 - `fact_propiedades.csv` — una fila por propiedad
 - `dim_barrios.csv` — una fila por barrio
@@ -378,30 +360,20 @@ La página 5 tiene un slicer adicional: **Modalidad** (Largo Plazo / Temporario)
 
 ### Página 1: Visión General del Mercado
 
-**Objetivo:** foto rápida del tamaño y composición del mercado antes del detalle.
-
-**Qué muestra:**
-- 3 tarjetas KPI: precio mediano por m² (USD), cantidad total de propiedades, m² promedio.
-- Gráfico de torta de **Operaciones**: distribución entre Venta, Alquiler y Alquiler Temporal.
-- **Treemap "Cantidad de Propiedades por Barrio (Top 15)"**, coloreado por cluster dominante. Palermo, Recoleta y Belgrano son los de mayor volumen.
-- **Histograma de precio USD/m²**: la mayoría se concentra en el rango bajo, con cola larga (Puerto Madero y similares).
+Foto rápida del tamaño y composición del mercado antes del detalle: 3 tarjetas KPI (precio mediano por m² en USD, cantidad total de propiedades, m² promedio), gráfico de torta de **Operaciones**, **Treemap "Cantidad de Propiedades por Barrio (Top 15)"** coloreado por cluster dominante (Palermo, Recoleta y Belgrano son los de mayor volumen), e **histograma de precio USD/m²** con la cola larga de Puerto Madero y similares.
 
 ### Página 2: Mapa Espacial
 
-**Objetivo:** mostrar la dimensión geográfica del mercado.
-
-**Qué muestra:**
-- **Shape Map (coroplético)** de precio USD/m² mediano por barrio. Los tonos más oscuros marcan los barrios más caros (Puerto Madero diferenciado en azul). En el tooltip se ve la rentabilidad a largo plazo de cada barrio.
-- **Mapa de Puntos de Interés**: subte, tren y espacios verdes, con botones para alternar capas.
+Dimensión geográfica del mercado:
+- **Shape Map (coroplético)** de precio USD/m² mediano por barrio (Puerto Madero diferenciado en azul). El tooltip muestra la rentabilidad a largo plazo.
+- **Mapa de Puntos de Interés**: subte, tren y espacios verdes con botones para alternar capas.
 - **Mapa de burbujas de Propiedades**: cada punto es una propiedad, tamaño proporcional al promedio de m² y color según precio USD/m².
 
 El precio se concentra en el corredor norte (Núñez, Belgrano, Palermo, Recoleta, Puerto Madero) y cae hacia el sur y el oeste; la rentabilidad se comporta casi de manera opuesta.
 
 ### Página 3: Segmentación por Clusters
 
-**Objetivo:** evidenciar que el mercado no es homogéneo sino 4 micro-mercados con perfiles distintos.
-
-**Los 4 clusters:**
+Evidencia que el mercado no es homogéneo sino 4 micro-mercados con perfiles distintos:
 
 | Color | Cluster | Perfil |
 | :--- | :--- | :--- |
@@ -411,39 +383,36 @@ El precio se concentra en el corredor norte (Núñez, Belgrano, Palermo, Recolet
 | Verde | Cluster 2 | Departamentos en barrios de alto nivel socioeconómico |
 | Rojo | Cluster 3 | Departamentos amplios y antiguos, en barrios de alto nivel socioeconómico |
 
-**Qué muestra:** shape map por cluster dominante por barrio (el verde domina el corredor norte, el azul el centro, el naranja el sur y el oeste); gráfico de índices por cluster; scatter m² total vs precio USD/m² coloreado por cluster.
+Visuales: shape map por cluster dominante por barrio (verde domina el corredor norte, azul el centro, naranja el sur y el oeste); gráfico de índices por cluster; scatter m² total vs precio USD/m² coloreado por cluster.
 
 ### Página 4: Variables y Relaciones
 
-**Objetivo:** mostrar desde el lado técnico qué variables explican el precio por m² y cómo se separan los clusters en el espacio reducido.
-
-**Qué muestra:**
-- **Bar chart "Importancia Permutación por variable y signo"**: ordena las variables del modelo Ridge según cuánto cae el R² al aleatorizarlas. `score_antiguedad` aparece como la más relevante (signo negativo), seguida de `antiguedad_años`, `nivel_socioeconomico`, `índice_lujo` y los dummies de cluster.
+Lado técnico: qué variables explican el precio por m² y cómo se separan los clusters en el espacio reducido.
+- **Bar chart "Importancia Permutación por variable y signo"**: ordena las variables del modelo Ridge según cuánto cae el R² al aleatorizarlas. Encabezan antigüedad (negativo), nivel socioeconómico, índice de lujo y los dummies de cluster.
 - **"Mediana precio m² según ambientes"**: bar chart con barras de error mostrando cómo sube el precio por m² con la cantidad de ambientes.
 - **Scatter PCA**: proyecta las propiedades en dos componentes principales coloreado por cluster.
 
 ### Página 5: KPIs de negocio y prescriptiva — la página ejecutiva
 
-Responde "¿dónde conviene invertir?". Qué muestra:
-
+Responde "¿dónde conviene invertir?":
 - **Gauge de Rentabilidad neta (%)**: promedio de las propiedades visibles según filtros activos.
 - **Tarjeta "% Prop. oportunidad"**: porcentaje de propiedades en venta cuyo precio por m² está al menos 15% por debajo de la mediana de su barrio (`es_oportunidad = 1` si `precio_m2_relativo_barrio < 0.85`).
 - **Tarjeta "Modalidad Óptima"**: indica si conviene más LP o Temporario para el conjunto filtrado.
 - **Tarjeta "Años para recupero"**.
 - **Bar chart "Rentabilidad neta LP (%) por Barrio"**: ranking, reacciona al slicer de Modalidad.
-- **Tabla "Propiedades Oportunidad en Venta"**: lista las propiedades en venta marcadas como oportunidad, con `propiedad_id`, barrio, precio y precio USD/m². Ordenada por menor precio relativo (más subvaluadas primero).
+- **Tabla "Propiedades Oportunidad en Venta"**: lista las propiedades en venta marcadas como oportunidad, ordenadas por menor precio relativo (más subvaluadas primero).
 
-**El slicer de Modalidad: qué filtra y qué no.** A diferencia del resto, *Modalidad* no filtra las propiedades de la tabla ni del bar chart de barrios por cantidad. Es una tabla desconectada del modelo que solo controla qué columna de rentabilidad usan las medidas (LP vs Temporario). Esto es intencional: la modalidad es una decisión sobre cómo operar la propiedad después de comprarla, no un atributo de la propiedad en sí. Por eso la tabla de oportunidades siempre muestra propiedades en venta, sin importar qué modalidad esté seleccionada.
+**El slicer de Modalidad: qué filtra y qué no.** A diferencia del resto, *Modalidad* no filtra las propiedades de la tabla ni del bar chart de barrios por cantidad. Es una tabla desconectada del modelo que solo controla qué columna de rentabilidad usan las medidas (LP vs Temporario). Esto es intencional: la modalidad es una decisión sobre cómo operar la propiedad después de comprarla, no un atributo de la propiedad en sí.
 
 ### Demo guiada para el inversor (flujo de la página 5)
 
 Secuencia pensada para mostrar el dashboard en vivo, simulando la consulta del inversor:
 
 1. **Presupuesto.** Mover el slicer de Precio USD para fijar el techo. El dashboard recalcula el gauge, las tarjetas y el ranking de barrios, descartando los barrios donde el presupuesto no alcanza.
-2. **Ranking personalizado.** Con el presupuesto aplicado, el bar chart de barrios por rentabilidad neta muestra el top dentro de ese rango. Aparecen barrios que normalmente no están en mente como buenas opciones de inversión — ese es el aporte del análisis.
+2. **Ranking personalizado.** Con el presupuesto aplicado, el bar chart de barrios por rentabilidad neta muestra el top dentro de ese rango. Aparecen barrios que normalmente no están en mente como buenas opciones — ese es el aporte del análisis.
 3. **Modalidad Temporario.** Cambiar el slicer a "Temporario". El gauge, la tarjeta de modalidad óptima, los años de recupero y el ranking se recalculan usando rentabilidad temporaria.
 4. **Modalidad Largo Plazo.** Volver el slicer a LP. El ranking se reordena: distintos barrios pasan a liderar.
-5. **Foco en un barrio.** Seleccionar un barrio puntual desde el slicer (ej. Nueva Pompeya). Todos los visuales se filtran a ese barrio: el gauge muestra su rentabilidad específica, la tarjeta de años de recupero su valor puntual, y la tabla de oportunidades solo sus propiedades en venta subvaluadas. Acá el dashboard rinde mejor porque las medidas se calculan por barrio. Además, el ID de Argenprop permite ir a la publicación original en el sitio para analizar y, eventualmente, comprar.
+5. **Foco en un barrio.** Seleccionar un barrio puntual (ej. Nueva Pompeya). Todos los visuales se filtran a ese barrio: el gauge muestra su rentabilidad específica, la tabla de oportunidades solo sus propiedades en venta subvaluadas. El ID de Argenprop permite ir a la publicación original.
 
 Con esto, la decisión deja de depender de una opinión externa y pasa a sostenerse sobre datos cuantificables, explorables en tiempo real.
 
@@ -492,8 +461,8 @@ Llevarlo a producción implicaría:
 
 - **Empaquetado**: serializar los modelos (Ridge/Lasso, regresión logística, K-Means) con `joblib` (más adecuado que Pickle u ONNX para este tipo de modelos de scikit-learn) y unificar la limpieza, el enriquecimiento espacial y los índices sintéticos en un único objeto `Pipeline`, para que cada corrida nueva de scraping pase por exactamente los mismos pasos que los datos de entrenamiento.
 - **Validación de inputs**: hoy gran parte de la limpieza consiste en detectar a posteriori errores ya cargados en los datos (precios "a consultar" como "1 peso", monedas mal clasificadas). En producción convendría validar cada aviso contra un esquema (ej. Pydantic) en el momento del scraping, antes de que entre al pipeline.
-- **Monitoreo de Data Drift**: test de Kolmogorov-Smirnov para variables numéricas (precio/m², superficie) y test Chi-cuadrado para categóricas (mix de barrios, proporción ARS/USD), comparando cada corrida nueva contra la anterior, más alertas simples ante categorías nunca vistas (barrios o segmentos nuevos).
-- **Concept Drift**: la relación entre variables y precio también puede cambiar con el tiempo (ej. la relación entre distancia al subte y precio/m², que en este análisis salió positiva y contraria a la intuición, podría invertirse si cambia la regulación de alquileres o el contexto cambiario), lo que justifica re-validar las hipótesis periódicamente en vez de asumirlas permanentes.
+- **Monitoreo de Data Drift**: test de Kolmogorov-Smirnov para variables numéricas (precio/m², superficie) y test Chi-cuadrado para categóricas (mix de barrios, proporción ARS/USD), comparando cada corrida nueva contra la anterior, más alertas simples ante categorías nunca vistas.
+- **Concept Drift**: la relación entre variables y precio también puede cambiar con el tiempo (ej. la relación entre distancia al subte y precio/m², que en este análisis salió positiva y contraria a la intuición, podría invertirse si cambia la regulación de alquileres o el contexto cambiario), lo que justifica re-validar las hipótesis periódicamente.
 - **Reentrenamiento y dashboard**: reentrenar modelos y clustering en una cadencia más espaciada que el scraping (ej. mensual), versionando los artefactos para poder hacer rollback, y publicar el `.pbix` en Power BI Service con un dataflow conectado a un storage compartido y actualización programada, en vez de exportar y subir el archivo a mano.
 
-El desarrollo completo de esta reflexión está en la sección 7.4 de `07_insights_y_modelos.ipynb`.
+El desarrollo completo de esta reflexión está en el notebook `08_modelos_y_recomendacion.ipynb`.
