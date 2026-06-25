@@ -295,7 +295,7 @@ Cálculo de los siguientes KPIs por barrio, con precios normalizados a USD, y ex
 | 3 | Precio por m² | Precio Publicado / m² - mediana por barrio y tipo de operación | Normaliza el valor para comparar entre barrios |
 | 4 | Rentabilidad Neta Largo Plazo | (Alquiler Anual − Expensas Anuales del Propietario) / Precio Venta × 100 | Rentabilidad real descontando expensas |
 | 5 | Precio/m² Relativo por Barrio | Precio/m² propiedad / Mediana Precio/m² barrio | Identifica propiedades por debajo de la mediana del barrio |
-| 6 | Rentabilidad Bruta Temporario | (Alquiler Mensual Mediano Temporario × 12) / Precio Venta Mediano × 100 | Rendimiento bruto temporario |
+| 6 | Rentabilidad Bruta Temporario | (Alquiler Mensual Mediano Temporario × 12) / Precio Venta Mediano × 100 | Rendimiento bruto temporario con una tasa de ocupación del 73% |
 | 7 | Índice Bruto Modalidad Óptima | Rent. Bruta Temp / Rent. Bruta LP | > 1 indica que temporario supera al largo plazo (bruto) |
 | 8 | Rentabilidad Neta Temporario | (Ingreso Anual Temporario − Expensas) / Precio × 100 | Rentabilidad temporaria neta |
 | 9 | Índice Neto Modalidad Óptima | Rent. Neta Temp / Rent. Neta LP | > 1 indica que temporario supera al largo plazo (neto) |
@@ -430,9 +430,9 @@ Junto a los notebooks, el repositorio incluye un único proceso pesado en `scrip
 
 Para el inversor principiante, la evidencia recolectada sugiere:
 
-1. **No comprar en los barrios más caros buscando rentabilidad.** El precio por m² más alto (Puerto Madero, Recoleta, Palermo, Belgrano) no se traduce en mejor retorno; de hecho la correlación con la rentabilidad neta es negativa. Conviene mirar barrios de gama media o del corredor sur (Villa Lugano, Constitución, La Boca, Monserrat, Nueva Pompeya).
+1. **No comprar en los barrios más caros buscando rentabilidad.** El precio por m² más alto (Puerto Madero, Recoleta, Palermo, Belgrano) no se traduce en mejor retorno; de hecho la correlación con la rentabilidad neta es negativa. Conviene mirar barrios de gama media o del corredor sur (Villa Lugano, Constitución, La Boca, Monserrat, Nueva Pompeya). Se deben tener en cuenta los barrios de gama alta solo si el inversor prioriza el status del barrio y/o la liquidez de venta de la propiedad sobre la rentabilidad.
 2. **Los amenities premium (pileta, gimnasio) son una inversión defendible**, ya que su efecto sobre el precio se traslada también al alquiler; no es solo un costo de venta que no se recupera.
-3. **La modalidad de alquiler óptima depende del barrio y del perfil de la propiedad**, no hay una respuesta universal. La distancia al subte es un factor relevante específicamente para decidir si conviene apuntar a temporario.
+3. **La modalidad de alquiler óptima depende del barrio y del perfil de la propiedad**, no hay una respuesta universal. Aunque recomendamos al alquiler a largo plazo como base, depende fuertemente del porcentaje de ocupación particular. 
 4. La hipótesis de que los barrios turísticos rinden mejor en alquiler temporario **no se pudo confirmar con la evidencia disponible**; en la muestra analizada, el largo plazo rindió incluso mejor en esos barrios.
 5. El **modelo de tasación** sirve como contrapeso a la asimetría informativa entre comprador y vendedor: para cualquier propiedad publicada, devuelve el precio/m² esperado dado su perfil y permite cuantificar cuánto sobreprecio está pidiendo el vendedor.
 6. El **dashboard de Power BI** permite explorar estas conclusiones de forma interactiva, filtrando por presupuesto, barrio, cluster y modalidad.
@@ -448,8 +448,8 @@ Para el inversor principiante, la evidencia recolectada sugiere:
 - **Cobertura de geocoding desigual**: aproximadamente 1 de cada 7 avisos no tiene coordenadas resueltas, y la cobertura varía por barrio (Puerto Madero es el caso más bajo, con 68%), lo que introduce un sesgo potencial en los análisis espaciales para esos barrios.
 - **Clustering hecho sobre ventas en dólares**: los micro-mercados descubiertos no son directamente extrapolables al mercado de alquileres, que podría tener su propia segmentación.
 - **Modelo de modalidad de alquiler con target a nivel barrio**: el AUC alto debe leerse con cautela ya que el target se construyó a nivel barrio y la clase "temporario" es minoritaria.
-- **Factor de ocupación temporario asumido**: el ingreso temporario se calcula asumiendo 75% de ocupación anual. La rentabilidad efectiva escala con este factor.
-- **Sin precios de cierre**: los precios usados son de oferta. El precio real al que se cierran las operaciones suele ser menor por margen de negociación, pero el portal no lo publica.
+- **Factor de ocupación temporario asumido**: el ingreso temporario se calcula asumiendo 73% de ocupación anual. La rentabilidad efectiva escala con este factor.
+- **Sin precios de cierre**: los precios usados son de oferta. El precio real al que se cierran las operaciones suele ser menor por margen de negociación, pero el portal no lo publica. De todas formas, utilizar el precio de publicación es realista ya que son los precios disponibles para cualquier inversor.  
 
 ---
 
